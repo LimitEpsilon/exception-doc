@@ -41,6 +41,9 @@
 \newcommand*{\istype}{\mathrel{⩴}}
 \newcommand*{\ortype}{\mathrel{|}}
 
+% for complement
+\newcommand{\loverbar}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu}
+
 \title{Constructing Set Constraints for ReScript}
 \author{서울대학교 전기$\cdot$정보공학부 2018-12602 이준협}
 \date{}
@@ -69,6 +72,7 @@
   | $f^{-1}_{(i)}(se)$ : projection onto the i-th argument of $f$
   | $se \cup se$ : union
   | $se \cap se$ : intersection
+  | $\loverbar{se}$ : complement
 \end{bnfgrammar}
 
 The definition of the conditional set expression needs clarification.
@@ -97,35 +101,166 @@ Now we are in a position to define constraint construction rules for our ReScrip
 
 \begin{center}
 \begin{prooftree}
-    \infer[left label={UNIT, INT, BOOL}]0[$c=(),n,b$] {\rhd c \colon V_{e}\supseteq c}
+    \infer[left label={[UNIT, INT, BOOL]}]0[$c=(),n,b$] {\rhd c \colon V_{e}\supseteq c}
 \end{prooftree}
+\vspace{0.2cm}
 
 \begin{prooftree}
   \hypo{\rhd e_{1} \colon C_{1}}
   \hypo{\rhd e_{2} \colon C_{2}}
-  \infer[left label={APP}]2{\rhd e_{1} \: e_{2} \colon (V_{e}\supseteq \mathsf{body}_{V}(V_{e_{1}}))\wedge
+  \infer[left label={[APP]}]2{\rhd e_{1} \: e_{2} \colon (V_{e}\supseteq \mathsf{body}_{V}(V_{e_{1}}))\wedge
     (P_{e}\supseteq (\mathsf{body}_{P}(P_{e_{1}}) \cup P_{e_{1}} \cup P_{e_{2}})) \wedge
     (\mathsf{par}(V_{e_{1}}) \supseteq V_{e_{2}})\wedge
     C_{1}\wedge
     C_{2}}
 \end{prooftree}
+\vspace{0.2cm}
 
 \begin{prooftree}
   \hypo{\rhd e' \colon C'}
-  \infer[left label={FN}]1{\rhd \lambda x.e' \colon (V_{e}\supseteq \lambda x.e')\wedge
+  \infer[left label={[FN]}]1{\rhd \lambda x.e' \colon (V_{e}\supseteq \lambda x.e')\wedge
     (\mathsf{body}_{V}(V_{e})\supseteq V_{e'})\wedge
     (\mathsf{body}_{P}(V_{e})\supseteq P_{e'})\wedge
     (\mathsf{par}(V_{e})\subseteq V_{x})\wedge
     C'}
 \end{prooftree}
+\vspace{0.2cm}
 
 \begin{prooftree}
   \hypo{\rhd e_1 \colon C_1}
   \hypo{\rhd e_2 \colon C_2}
-  \infer[left label={LET}]2{\rhd let \: x=e_1 \: in \: e_2 \colon
+  \infer[left label={[LET]}]2{\rhd let \: x=e_1 \: in \: e_2 \colon
     (V_x \supseteq V_{e_1})\wedge
-    (P_x \supseteq P_{e_2})\wedge
+    (V_e \supseteq V_{e_2})\wedge
+    (P_e \supseteq P_{e_1} \cup P_{e_2})\wedge
+    C_1\wedge
+    C_2
     }
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e_1 \colon C_1}
+  \hypo{\rhd e_2 \colon C_2}
+  \infer[left label={[BOP]}]2{\rhd e_1 \: \mathsf{bop} \: e_2 \colon
+    (V_e \supseteq \mathsf{bop}(V_{e_1}, V_{e_2}))\wedge
+    (P_e \supseteq P_{e_1}\cup P_{e_2})\wedge
+    \underbrace{(P_e \supseteq (V_{e_2}\cap 0 \Rightarrow \mathsf{exn}(\mathsf{Divide\_by\_zero}, ())))}_{\text{when bop is }\div}\wedge
+    C_1 \wedge
+    C_2}
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e' \colon C'}
+  \infer[left label={[CON]}]1{\rhd \mathsf{con}\: \kappa \: e'\colon
+    (V_e \supseteq \mathsf{con}(\kappa , V_{e'}))\wedge
+    (P_e \supseteq P_{e'})\wedge
+    C'}
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e' \colon C'}
+  \infer[left label={[EXN]}]1{\rhd \mathsf{exn}\: \kappa \: e' \colon
+    (V_e \supseteq \mathsf{exn}(\kappa, V_{e'}))\wedge
+    (P_e \supseteq P_{e'})\wedge
+    C'}
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e' \colon C'}
+  \infer[left label={[DECON]}]1{\rhd \mathsf{decon}(\kappa, e') \colon
+    (V_e \supseteq \mathsf{con}^{-1}_{(2)}(V_{e'}\cap \mathsf{con}(\kappa, \_)) \cup \mathsf{exn}^{-1}_{(2)}(V_{e'}))\wedge
+    (P_e \supseteq P_{e'})\wedge
+    C'}
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e_i \colon C_i \: (1 \leq i \leq n)}
+  \infer[left label={[RECORD]}]1{\rhd \{l_1=e_i,...,l_n=e_n\} \colon
+    \bigwedge_{i=1}^{n}{(\mathsf{fld}(V_e, l_i) \supseteq V_{e_i})}\wedge
+    (P_e \supseteq \bigcup_{i=1}^{n}{P_{e_i}})\wedge
+    \bigwedge_{i=1}^{n}{C_i}}
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e' \colon C'}
+  \infer[left label={[FIELD]}]1{\rhd e'.l \colon
+    (V_e \supseteq \mathsf{fld}(V_{e'}, l))\wedge
+    (P_e \supseteq P_{e'})\wedge
+    C'
+  }
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e' \colon C'}
+  \infer[left label={[REF]}]1[new loc]{\rhd \mathsf{ref}\: e' \colon
+    (V_e \supseteq \mathsf{loc})\wedge
+    (\mathsf{cnt}(\mathsf{loc})\supseteq V_{e'})\wedge
+    (P_e \supseteq P_{e'})\wedge
+    C'}
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e_1 \colon C_1}
+  \hypo{\rhd e_2 \colon C_2}
+  \infer[left label={[UPDATE]}]2{\rhd e_1 := e_2 \colon
+    (\mathsf{cnt}(V_{e_1})\supseteq V_{e_2})\wedge
+    (P_e \supseteq P_{e_1}\cup P_{e_2})\wedge
+    C_1 \wedge
+    C_2}
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e' \colon C'}
+  \infer[left label={[BANG]}]1{\rhd !e' \colon
+    (V_e \supseteq \mathsf{cnt}(V_{e'}))\wedge
+    (P_e \supseteq P_{e'})\wedge
+    C'}
+\end{prooftree}
+\vspace{0.2cm}
+
+Function for generating constraints out of pattern matching.
+
+If we want to figure out the constraint for the value $X$ of ``$\mathsf{match}\: Y \: \mathsf{with}\: p\rightarrow e$'':
+
+\[
+\mathsf{case}(X,Y,p,e)\coloneq
+\begin{cases}
+  (Y\subseteq V_{x})\wedge (V_{e}\subseteq X) & (p=x)\\
+  (\mathsf{fld}(Y, l_{1})\Rightarrow ... \Rightarrow \mathsf{fld}(Y, l_{n})\Rightarrow V_{e}) \subseteq X & (p=\left\{l_{i}\right\}_{i=1}^{n})\\
+  (\kappa \cap (\mathsf{con}^{-1}_{(1)}(Y)\cup\mathsf{exn}^{-1}_{(1)}(Y)))\Rightarrow V_{e} \subseteq X & (p=\kappa)\\
+  (Y \cap c)\Rightarrow V_{e} \subseteq X & (p=\mathsf{constant})\\
+  V_{e}\subseteq X & (p = \_)
+\end{cases}
+\]
+
+\begin{prooftree}
+  \hypo{\rhd e' \colon C'}
+  \hypo{\rhd e_i \colon C_i \: (1\leq i \leq n)}
+  \infer[left label={[CASE]}]2{\rhd \mathsf{case}\: e' \: \left(p_i \rightarrow e_i\right)_{i=1}^{n}\colon
+    \bigwedge_{i=1}^{n}\mathsf{case}(V_{e}, V_{e'}, p_i, e_i)\wedge
+    (P_e \supseteq \bigcup_{i=1}^{n}P_i \cup P_{e'})\wedge
+    C'\wedge
+    \bigwedge_{i=1}^{n}C_i
+  }
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e' \colon C'}
+  \hypo{\rhd e_i \colon C_i \: (1\leq i \leq n)}
+  \infer[left label={[HANDLE]}]2{\rhd \mathsf{handle}\: e' \: \left(p_i \rightarrow e_i\right)_{i=1}^{n}\colon
+    (P_e \supseteq (P_{e'}\cap\bigcap_{i=1}^{n}\loverbar{\mathsf{exn}(p_i, \_)})\cup \bigcup_{i=1}^{n}P_{e_i})\wedge
+    (V_e \supseteq V_{e'}\cup \bigcup_{i=1}^{n}{V_{e_i}})
+  }
 \end{prooftree}
 \end{center}
 
