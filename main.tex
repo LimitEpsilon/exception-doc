@@ -41,6 +41,9 @@
 \newcommand*{\istype}{\mathrel{⩴}}
 \newcommand*{\ortype}{\mathrel{|}}
 
+% for complement
+\newcommand{\loverbar}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu}
+
 \title{Constructing Set Constraints for ReScript}
 \author{서울대학교 전기$\cdot$정보공학부 2018-12602 이준협}
 \date{}
@@ -69,27 +72,27 @@
   | $f^{-1}_{(i)}(se)$ : projection onto the i-th argument of $f$
   | $se \cup se$ : union
   | $se \cap se$ : intersection
+  | $\loverbar{se}$ : complement
 \end{bnfgrammar}
 
-The definition of the conditional set expression needs clarification.
+Case expressions need special concern when building set constraints. For example, take a look at the for loop.
+\begin{figure}[htb]
+\centering
+\begin{BVerbatim}
+let for x = match x > e2 with
+            | true -> ()
+            | false -> e3; for (x + 1)
+in
+for e1
+\end{BVerbatim}
+\end{figure}
 
-\[
-  se_{1} \Rightarrow se_{2} \coloneq
-  \begin{cases}
-    \varnothing & (se_{1}=\varnothing)\\
-    se_{2} & (o.w)
-  \end{cases}
-\]
+The above program is equivalent to \texttt{for x = e1 to e2 do e3 done}. Translating this is difficult as case statements partition the program states.
+That is, ``\texttt{e3; for (x + 1)}'' is evaluated under the constraint that $>(V_{x},V_{e_{2}})\subseteq \mathtt{false}$ and ``\texttt{()}'' is evaluated under the constraint that $>(V_{x}, V_{e_{2}})\subseteq \mathtt{true}$.
 
-The conditional set expression is a naive approximation for pattern matching. Consider the case when we want to match an expression against the record pattern with fields $x$ and $y$.
-The constraints describing the record $r = \{x = 1, y = 2\}$ are $1 \subseteq \mathsf{fld}(V_{r}, x) \wedge 2 \subseteq \mathsf{fld}(V_{r}, y)$.
-To pattern-match $r$ against $\{x, y\}$, we want the fields $x$ and $y$ of $V_{r}$ to be nonempty.
-Thus, the value of ``$match\:r\:with\:\{x, y\}\rightarrow e$'' is $\mathsf{fld}(V_{r}, x)\Rightarrow(\mathsf{fld}(V_{r},y)\Rightarrow V_{e})$.
+These constraints obviously cannot be \texttt{and}-ed together, as the result is trivially \texttt{false}. Since the constraints above partition the program states, it is straightforward that each set expression must have different ``versions'' of itself in each partition.
 
-The conditional set expression can also be used to define conditional set constraints \cite{Aik99}.
-\[
-  se \Rightarrow \bigwedge_{i=1}^{n}{X_{i}\subseteq Y_{i}} \coloneq \bigwedge_{i=1}^{n}{(se \Rightarrow X_{i}) \subseteq Y_{i}}
-\]
+So each case statement creates a parallel world where some set constraint becomes true.
 
 \section{Constructing set constraints}
 
