@@ -326,7 +326,7 @@ That is, ``\texttt{e3; for (x + 1)}'' is evaluated under the constraint that $>(
 
 These constraints obviously cannot be \texttt{and}-ed together, as the partitions are mutually disjoint. In other words, $x > e_{2}$ cannot evaluate to both true and false at the same time. Thus, it is straightforward that each set expression must have different ``versions'' of itself in each partition. Each case statement creates a ``parallel world'' where some set constraint becomes true.
 
-The conditional expression approximation is very coarse, as can be observed by the [FOR] rule in section 2. Assume that $e_{1}=1$, $e_{2}=5$, $e_{3}=()$. Since $1\subseteq V_{x}$, $\mathtt{false}\subseteq >(V_{x}, 5)\subseteq >(V_{x}, V_{e_{2}})$, so the conditional expression is activated, resulting in the constraint that $V_{x}\supseteq +(V_{x}, 1)$. Then the least model must map $V_{x}$ to $\{x\in\mathbb{Z}\vbar x \ge 1\}$. This overshoots the possible values that $x$ may have, which is $\{1, 2, 3, 4, 5, 6\}$.
+The conditional expression approximation is very coarse, as can be observed in the [FOR] rule in section 2. Assume that $e_{1}=1$, $e_{2}=5$, $e_{3}=()$. Since $1\subseteq V_{x}$, $\mathtt{false}\subseteq >(V_{x}, 5)\subseteq >(V_{x}, V_{e_{2}})$, so the conditional expression is activated. Then $V_{x}\supseteq +(V_{x}, 1)$ becomes valid. Then the least model must map $V_{x}$ to $\{x\in\mathbb{Z}\vbar x \ge 1\}$. This overshoots the possible values that $x$ may have, which is $\{1, 2, 3, 4, 5, 6\}$.
 
 Why does this happen? It is because in the condition $V_{x}\supseteq +(V_{x}, 1)$, the $V_{x}$-s in different sides are in different partitions. The $V_{x}$ on the left-hand side can be in either partition, as it is not matched against any pattern yet. However, the $V_{x}$ on the right-hand side must be in the partition where $x>e_{2}$ is matched against $\mathtt{false}$.
 
@@ -334,5 +334,41 @@ Then when are conditional expressions successful? In the case when $e_{1}=5$ and
 
 The obvious problem is that programs are often written so that all cases are reachable, maybe except for the case when some value is divided by a nonzero constant. Then the question is whether conditional expressions in the [CASE, FOR, WHILE] rules actually decrease false alarms. When implementing the analyzer it might not be a bad idea to eliminate the conditional expressions.
 
+If the conditional expressions are eliminated, then the case function changes to
+
+\[
+\mathsf{case}(X,Y,p,e)\coloneq
+\begin{cases}
+  (Y\subseteq V_{x})\wedge (V_{e}\subseteq X) & (p=x)\\
+  V_{e} \subseteq X & (o.w)
+\end{cases}
+\]
+
+and the [FOR, WHILE] rules become
+
+\begin{center}
+\begin{prooftree}
+  \hypo{\rhd e_1 \colon C_1}
+  \hypo{\rhd e_2 \colon C_2}
+  \hypo{\rhd e_3 \colon C_3}
+  \infer[left label={[FOR]}]3{
+    {\begin{array}{r l}
+       \rhd \mathsf{for\:}x\: e_1\: e_2\: e_3 \colon
+       &(()\subseteq V_e) \wedge (V_x \supseteq +(V_x, 1) \cup V_{e_1})\\
+       &\wedge (P_e \supseteq P_{e_1}\cup P_{e_2}\cup P_{e_3})\wedge
+       C_1 \wedge C_2 \wedge C_3
+    \end{array}}
+  }
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e_1 \colon C_1}
+  \hypo{\rhd e_2 \colon C_2}
+  \infer[left label={[WHILE]}]2{
+       \rhd \mathsf{while\:}e_1 \: e_2 \colon
+       (V_e \supseteq ()) \wedge (P_e \supseteq P_{e_1}\cup P_{e_2}) \wedge C_1 \wedge C_2}
+\end{prooftree}
+\end{center}
 \printbibliography
 \end{document}
