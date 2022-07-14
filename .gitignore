@@ -5,3 +5,5 @@
 *.log
 *.xml
 *.gz
+.*
+!.gitignore
