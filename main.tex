@@ -1,0 +1,133 @@
+\documentclass{article}
+\usepackage{geometry}
+\geometry{
+ a4paper,
+ total={170mm,257mm},
+ left=20mm,
+ top=20mm,
+ }
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{kotex}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{ebproof}
+\usepackage{fancyvrb}
+\usepackage{biblatex}
+\usepackage{csquotes}
+\newtheorem{clm}{Claim}[section]
+\addbibresource{citations.bib}
+
+% fonts
+\usepackage[math-style=TeX,bold-style=TeX]{unicode-math}
+
+\usepackage{libertinus}
+
+\newfontfamily{\fallbackfont}{EB Garamond}
+\DeclareTextFontCommand{\textfallback}{\fallbackfont}
+\usepackage{newunicodechar}
+\newunicodechar{⩴}{\textfallback{⩴}}
+
+\setmainhangulfont{Noto Serif CJK KR}
+\setsanshangulfont[BoldFont={* Bold}]{KoPubWorld Dotum.ttf}
+\setmonohangulfont{D2Coding}
+
+\usepackage{simplebnf}
+
+% because of simplebnf
+\newcommand\vbar{|}
+\newcommand*{\finto}{\xrightarrow{\text{\textrm{fin}}}}
+\newcommand*{\istype}{\mathrel{⩴}}
+\newcommand*{\ortype}{\mathrel{|}}
+
+\title{Constructing Set Constraints for ReScript}
+\author{서울대학교 전기$\cdot$정보공학부 2018-12602 이준협}
+\date{}
+\begin{document}
+\maketitle
+\section{Definition of set expressions}
+\begin{bnfgrammar}
+  $se$ ::= $\varnothing$ : empty set
+  | $\_$ : maximum set
+  | $()$ : unit
+  | $n$ : integer
+  | $b$ : boolean
+  | $\lambda x.e$ : function
+  | $V_{e}$ : set variable corresponding to the possible values of $e$
+  | $P_{e}$ : set variable corresponding to the possible exn packets of $e$
+  | $\mathsf{body}_{V}(se)$ : values that $se$ can spit out when $se$ is applied to something
+  | $\mathsf{body}_{P}(se)$ : exn packets that $se$ can spit out when $se$ is applied to something
+  | $\mathsf{par}(se)$ : values that can be a parameter for $se$
+  | $\kappa$ : constructor
+  | $l$ : field of a record
+  | $\mathsf{con}(\kappa,se)$ : construct
+  | $\mathsf{exn}(\kappa,se)$ : exception
+  | $\mathsf{fld}(se, l)$ : contents of the field $l$ of a record $se$
+  | $\mathsf{cnt}(se)$ : contents of a reference
+  | $\mathsf{bop}(se, se)$ : binary operators, where $\mathsf{bop}\in\{+, -, \times, \div, =, <, >\}$
+  | $f^{-1}_{(i)}(se)$ : projection onto the i-th argument of $f$
+  | $se \cup se$ : union
+  | $se \cap se$ : intersection
+\end{bnfgrammar}
+
+The definition of the conditional set expression needs clarification.
+
+\[
+  se_{1} \Rightarrow se_{2} \coloneq
+  \begin{cases}
+    \varnothing & (se_{1}=\varnothing)\\
+    se_{2} & (o.w)
+  \end{cases}
+\]
+
+The conditional set expression is a naive approximation for pattern matching. Consider the case when we want to match an expression against the record pattern with fields $x$ and $y$.
+The constraints describing the record $r = \{x = 1, y = 2\}$ are $1 \subseteq \mathsf{fld}(V_{r}, x) \wedge 2 \subseteq \mathsf{fld}(V_{r}, y)$.
+To pattern-match $r$ against $\{x, y\}$, we want the fields $x$ and $y$ of $V_{r}$ to be nonempty.
+Thus, the value of ``$match\:r\:with\:\{x, y\}\rightarrow e$'' is $\mathsf{fld}(V_{r}, x)\Rightarrow(\mathsf{fld}(V_{r},y)\Rightarrow V_{e})$.
+
+The conditional set expression can also be used to define conditional set constraints \cite{Aik99}.
+\[
+  se \Rightarrow \bigwedge_{i=1}^{n}{X_{i}\subseteq Y_{i}} \coloneq \bigwedge_{i=1}^{n}{(se \Rightarrow X_{i}) \subseteq Y_{i}}
+\]
+
+\section{Constructing set constraints}
+
+Now we are in a position to define constraint construction rules for our ReScript-like language. Hopefully this would be reasonably fast when implemented and be accurate enough...
+
+\begin{center}
+\begin{prooftree}
+    \infer[left label={UNIT, INT, BOOL}]0[$c=(),n,b$] {\rhd c \colon V_{e}\supseteq c}
+\end{prooftree}
+
+\begin{prooftree}
+  \hypo{\rhd e_{1} \colon C_{1}}
+  \hypo{\rhd e_{2} \colon C_{2}}
+  \infer[left label={APP}]2{\rhd e_{1} \: e_{2} \colon (V_{e}\supseteq \mathsf{body}_{V}(V_{e_{1}}))\wedge
+    (P_{e}\supseteq (\mathsf{body}_{P}(P_{e_{1}}) \cup P_{e_{1}} \cup P_{e_{2}})) \wedge
+    (\mathsf{par}(V_{e_{1}}) \supseteq V_{e_{2}})\wedge
+    C_{1}\wedge
+    C_{2}}
+\end{prooftree}
+
+\begin{prooftree}
+  \hypo{\rhd e' \colon C'}
+  \infer[left label={FN}]1{\rhd \lambda x.e' \colon (V_{e}\supseteq \lambda x.e')\wedge
+    (\mathsf{body}_{V}(V_{e})\supseteq V_{e'})\wedge
+    (\mathsf{body}_{P}(V_{e})\supseteq P_{e'})\wedge
+    (\mathsf{par}(V_{e})\subseteq V_{x})\wedge
+    C'}
+\end{prooftree}
+
+\begin{prooftree}
+  \hypo{\rhd e_1 \colon C_1}
+  \hypo{\rhd e_2 \colon C_2}
+  \infer[left label={LET}]2{\rhd let \: x=e_1 \: in \: e_2 \colon
+    (V_x \supseteq V_{e_1})\wedge
+    (P_x \supseteq P_{e_2})\wedge
+    }
+\end{prooftree}
+\end{center}
+
+\printbibliography
+\end{document}
