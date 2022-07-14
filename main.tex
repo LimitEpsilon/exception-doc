@@ -16,6 +16,7 @@
 \usepackage{fancyvrb}
 \usepackage{biblatex}
 \usepackage{csquotes}
+\usepackage{multicol}
 \newtheorem{clm}{Claim}[section]
 \addbibresource{citations.bib}
 
@@ -171,11 +172,12 @@ Now we are in a position to define constraint construction rules for our ReScrip
 
 \begin{prooftree}
   \hypo{\rhd e' \colon C'}
-  \infer[left label={[DECON]}]1{\rhd \mathsf{decon}(\kappa, e') \colon
+  \infer[left label={[DECON]}]1[as in SML-NJ's Lambda]{\rhd \mathsf{decon}\:\kappa\: e' \colon
     (V_e \supseteq \mathsf{con}^{-1}_{(2)}(V_{e'}\cap \mathsf{con}(\kappa, \_)) \cup \mathsf{exn}^{-1}_{(2)}(V_{e'}))\wedge
     (P_e \supseteq P_{e'})\wedge
     C'}
 \end{prooftree}
+
 \vspace{0.2cm}
 
 \begin{prooftree}
@@ -225,10 +227,9 @@ Now we are in a position to define constraint construction rules for our ReScrip
     (P_e \supseteq P_{e'})\wedge
     C'}
 \end{prooftree}
-\vspace{0.2cm}
+\end{center}
 
-Function for generating constraints out of pattern matching.
-
+We define an auxilary function for generating constraints out of pattern matching.
 If we want to figure out the constraint for the value $X$ of ``$\mathsf{match}\: Y \: \mathsf{with}\: p\rightarrow e$'':
 
 \[
@@ -242,6 +243,7 @@ If we want to figure out the constraint for the value $X$ of ``$\mathsf{match}\:
 \end{cases}
 \]
 
+\begin{center}
 \begin{prooftree}
   \hypo{\rhd e' \colon C'}
   \hypo{\rhd e_i \colon C_i \: (1\leq i \leq n)}
@@ -259,7 +261,48 @@ If we want to figure out the constraint for the value $X$ of ``$\mathsf{match}\:
   \hypo{\rhd e_i \colon C_i \: (1\leq i \leq n)}
   \infer[left label={[HANDLE]}]2{\rhd \mathsf{handle}\: e' \: \left(p_i \rightarrow e_i\right)_{i=1}^{n}\colon
     (P_e \supseteq (P_{e'}\cap\bigcap_{i=1}^{n}\loverbar{\mathsf{exn}(p_i, \_)})\cup \bigcup_{i=1}^{n}P_{e_i})\wedge
-    (V_e \supseteq V_{e'}\cup \bigcup_{i=1}^{n}{V_{e_i}})
+    (V_e \supseteq V_{e'}\cup \bigcup_{i=1}^{n}{V_{e_i}})\wedge
+    C'\wedge
+    \bigwedge_{i=1}^{n}C_i
+  }
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e' \colon C'}
+  \infer[left label={[RAISE]}]1{\rhd \mathsf{raise}\: e' \colon
+    (P_e \supseteq V_{e_1}\cup P_{e_1})\wedge
+    C'
+  }
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e_1 \colon C_1}
+  \hypo{\rhd e_2 \colon C_2}
+  \hypo{\rhd e_3 \colon C_3}
+  \infer[left label={[FOR]}]3{
+    {\begin{array}{r l}
+       \rhd \mathsf{for\:}x\: e_1\: e_2\: e_3 \colon &
+       (>(V_x , V_{e_1})\cap \mathtt{true} \Rightarrow ()\subseteq V_e)\\
+       &\wedge (>(V_x, V_{e_1})\cap \mathtt{false} \Rightarrow (C_3 \wedge (V_x \supseteq +(V_x, 1)) \wedge (P_e \supseteq P_{e_3})))\\
+       &\wedge (V_{x}\supseteq V_{e_1})
+       \wedge (P_e \supseteq P_{e_1}\cup P_{e_2})\wedge
+       C_1 \wedge C_2
+    \end{array}}
+  }
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e_1 \colon C_1}
+  \hypo{\rhd e_2 \colon C_2}
+  \infer[left label={[WHILE]}]2{
+    {\begin{array}{r l}
+       \rhd \mathsf{while\:}e_1 \: e_2 \colon &
+       (V_{e_1}\cap \mathtt{true})\Rightarrow (C_2 \wedge (P_e \supseteq P_{e_2}))\\
+       &\wedge ((V_{e_1}\cap \mathtt{false})\Rightarrow ()\subseteq V_e) \wedge (P_e \supseteq P_{e_1}) \wedge C_1
+    \end{array}}
   }
 \end{prooftree}
 \end{center}
