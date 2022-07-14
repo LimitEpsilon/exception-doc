@@ -307,5 +307,32 @@ If we want to figure out the constraint for the value $X$ of ``$\mathsf{match}\:
 \end{prooftree}
 \end{center}
 
+\section{Conditional expressions : a good approximation?}
+
+Case expressions are the cause for inaccuracy in approximating the program states. Take a look at the for loop.
+\begin{figure}[htb]
+\centering
+\begin{BVerbatim}
+let for x = match x > e2 with
+            | true -> ()
+            | false -> e3; for (x + 1)
+in
+for e1
+\end{BVerbatim}
+\end{figure}
+
+The above program is equivalent to \texttt{for x = e1 to e2 do e3 done}. Translating this to set constraints is difficult as case statements partition the program states.
+That is, ``\texttt{e3; for (x + 1)}'' is evaluated under the constraint that $>(V_{x},V_{e_{2}})\subseteq \mathtt{false}$ and ``\texttt{()}'' is evaluated under the constraint that $>(V_{x}, V_{e_{2}})\subseteq \mathtt{true}$.
+
+These constraints obviously cannot be \texttt{and}-ed together, as the partitions are mutually disjoint. In other words, $x > e_{2}$ cannot evaluate to both true and false at the same time. Thus, it is straightforward that each set expression must have different ``versions'' of itself in each partition. Each case statement creates a ``parallel world'' where some set constraint becomes true.
+
+The conditional expression approximation is very coarse, as can be observed by the [FOR] rule in section 2. Assume that $e_{1}=1$, $e_{2}=5$, $e_{3}=()$. Since $1\subseteq V_{x}$, $\mathtt{false}\subseteq >(V_{x}, 5)\subseteq >(V_{x}, V_{e_{2}})$, so the conditional expression is activated, resulting in the constraint that $V_{x}\supseteq +(V_{x}, 1)$. Then the least model must map $V_{x}$ to $\{x\in\mathbb{Z}\vbar x \ge 1\}$. This overshoots the possible values that $x$ may have, which is $\{1, 2, 3, 4, 5, 6\}$.
+
+Why does this happen? It is because in the condition $V_{x}\supseteq +(V_{x}, 1)$, the $V_{x}$-s in different sides are in different partitions. The $V_{x}$ on the left-hand side can be in either partition, as it is not matched against any pattern yet. However, the $V_{x}$ on the right-hand side must be in the partition where $x>e_{2}$ is matched against $\mathtt{false}$.
+
+Then when are conditional expressions successful? In the case when $e_{1}=5$ and $e_{2}=1$, for example, the conditional expression eliminates the treacherous condition $V_{x}\supseteq +(V_{x}, 1)$. In the context of exception analysis, $P_{e}\supseteq P_{e_{3}}$ is not considered at all, so the analysis is a bit more accurate.
+
+The obvious problem is that programs are often written so that all cases are reachable, maybe except for the case when some value is divided by a nonzero constant. Then the question is whether conditional expressions in the [CASE, FOR, WHILE] rules actually decrease false alarms. When implementing the analyzer it might not be a bad idea to eliminate the conditional expressions.
+
 \printbibliography
 \end{document}
