@@ -354,7 +354,7 @@ and the [FOR, WHILE] rules become
   \infer[left label={[FOR]}]3{
     {\begin{array}{r l}
        \rhd \mathsf{for\:}x\: e_1\: e_2\: e_3 \colon
-       &(()\subseteq V_e) \wedge (V_x \supseteq +(V_x, 1) \cup V_{e_1})\\
+       &(V_e \supseteq ()) \wedge (V_x \supseteq +(V_x, 1) \cup V_{e_1})\\
        &\wedge (P_e \supseteq P_{e_1}\cup P_{e_2}\cup P_{e_3})\wedge
        C_1 \wedge C_2 \wedge C_3
     \end{array}}
