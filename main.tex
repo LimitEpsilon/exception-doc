@@ -58,6 +58,7 @@
   | $n$ : integer
   | $b$ : boolean
   | $\lambda x.e$ : function
+  | $\mathsf{loc}$ : memory location
   | $V_{e}$ : set variable corresponding to the possible values of $e$
   | $P_{e}$ : set variable corresponding to the possible exn packets of $e$
   | $\mathsf{body}_{V}(se)$ : values that $se$ can spit out when $se$ is applied to something
@@ -110,7 +111,7 @@ Now we are in a position to define constraint construction rules for our ReScrip
   \hypo{\rhd e_{1} \colon C_{1}}
   \hypo{\rhd e_{2} \colon C_{2}}
   \infer[left label={[APP]}]2{\rhd e_{1} \: e_{2} \colon (V_{e}\supseteq \mathsf{body}_{V}(V_{e_{1}}))\wedge
-    (P_{e}\supseteq (\mathsf{body}_{P}(P_{e_{1}}) \cup P_{e_{1}} \cup P_{e_{2}})) \wedge
+    (P_{e}\supseteq (\mathsf{body}_{P}(V_{e_{1}}) \cup P_{e_{1}} \cup P_{e_{2}})) \wedge
     (\mathsf{par}(V_{e_{1}}) \supseteq V_{e_{2}})\wedge
     C_{1}\wedge
     C_{2}}
@@ -173,7 +174,10 @@ Now we are in a position to define constraint construction rules for our ReScrip
 \begin{prooftree}
   \hypo{\rhd e' \colon C'}
   \infer[left label={[DECON]}]1[as in SML-NJ's Lambda]{\rhd \mathsf{decon}\:\kappa\: e' \colon
-    (V_e \supseteq \mathsf{con}^{-1}_{(2)}(V_{e'}\cap \mathsf{con}(\kappa, \_)) \cup \mathsf{exn}^{-1}_{(2)}(V_{e'}))\wedge
+    (V_e \supseteq
+    \mathsf{con}^{-1}_{(2)}(\underbrace{V_{e'}\cap \mathsf{con}(\kappa, \_)}_{\text{filter}})
+    \cup
+    \mathsf{exn}^{-1}_{(2)}(\underbrace{V_{e'}\cap \mathsf{exn}(\kappa, \_)}_{\text{filter}}))\wedge
     (P_e \supseteq P_{e'})\wedge
     C'}
 \end{prooftree}
@@ -330,7 +334,7 @@ The conditional expression approximation is very coarse, as can be observed in t
 
 Why does this happen? It is because in the condition $V_{x}\supseteq +(V_{x}, 1)$, the $V_{x}$-s in different sides are in different partitions. The $V_{x}$ on the left-hand side can be in either partition, as it is not matched against any pattern yet. However, the $V_{x}$ on the right-hand side must be in the partition where $x>e_{2}$ is matched against $\mathtt{false}$.
 
-Then when are conditional expressions successful? In the case when $e_{1}=5$ and $e_{2}=1$, for example, the conditional expression eliminates the treacherous condition $V_{x}\supseteq +(V_{x}, 1)$. In the context of exception analysis, $P_{e}\supseteq P_{e_{3}}$ is not considered at all, so the analysis is a bit more accurate.
+Then when are conditional expressions successful? In the case when $e_{1}=5$ and $e_{2}=1$, for example, the conditional expression eliminates the treacherous condition $V_{x}\supseteq +(V_{x}, 1)$. In the context of exception analysis, $P_{e}\supseteq P_{e_{3}}$ is not considered at all, so the analysis is a bit more accurate. That is, only when the program doesn't lay a foot on the wrong path is when conditional expressions succeed.
 
 The obvious problem is that programs are often written so that all cases are reachable, maybe except for the case when some value is divided by a nonzero constant. Then the question is whether conditional expressions in the [CASE, FOR, WHILE] rules actually decrease false alarms. When implementing the analyzer it might not be a bad idea to eliminate the conditional expressions.
 
@@ -370,5 +374,11 @@ and the [FOR, WHILE] rules become
        (V_e \supseteq ()) \wedge (P_e \supseteq P_{e_1}\cup P_{e_2}) \wedge C_1 \wedge C_2}
 \end{prooftree}
 \end{center}
+
+TODO:
+\begin{enumerate}
+  \item How to solve the set constraints(first in the case when there are no conditional expressions) : based on the work of Nevin Heintze
+  \item Maybe, how to formulate the ``parellel worlds'' approach?
+\end{enumerate}
 \printbibliography
 \end{document}
