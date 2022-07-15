@@ -231,6 +231,19 @@ Now we are in a position to define constraint construction rules for our ReScrip
     (P_e \supseteq P_{e'})\wedge
     C'}
 \end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\rhd e_1 \colon C_1}
+  \hypo{\rhd e_2 \colon C_2}
+  \infer[left label={[SEQ]}]2{\rhd e_1 ; e_2 \colon
+    (V_e \supseteq V_{e_2})\wedge
+    (V_{e_1} \supseteq ())\wedge
+    (P_e \supseteq P_{e_1}\cup P_{e_2})\wedge
+    C_1 \wedge
+    C_2
+  }
+\end{prooftree}
 \end{center}
 
 We define an auxilary function for generating constraints out of pattern matching.
