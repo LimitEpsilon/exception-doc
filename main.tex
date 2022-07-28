@@ -46,7 +46,7 @@
 \newcommand{\loverbar}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu}
 
 \title{Constructing Set Constraints for ReScript}
-\author{서울대학교 전기$\cdot$정보공학부 2018-12602 이준협}
+\author{서울대학교 전기$\cdot$정보공학부 이재호, 이준협}
 \date{}
 \begin{document}
 \maketitle
@@ -57,15 +57,12 @@
   | $()$ : unit
   | $n$ : integer
   | $b$ : boolean
-  | $\lambda x.e$ : function
+  | $\langle\lambda x.e,\sigma\rangle$ : closure
   | $\mathsf{loc}$ : memory location
-  | $V_{e}$ : set variable corresponding to the possible values of $e$
-  | $P_{e}$ : set variable corresponding to the possible exn packets of $e$
-  | $\mathsf{body}_{V}(se)$ : values that $se$ can spit out when $se$ is applied to something
-  | $\mathsf{body}_{P}(se)$ : exn packets that $se$ can spit out when $se$ is applied to something
-  | $\mathsf{par}(se)$ : values that can be a parameter for $se$
-  | $\kappa$ : constructor
-  | $l$ : field of a record
+  | $V(e,\sigma)$ : set variable corresponding to the possible values of $e$ under $\sigma$
+  | $P(e,\sigma)$ : set variable corresponding to the possible exn packets of $e$ under $\sigma$
+  | $\mathsf{app}_{V}(se,e)$ : values that $se$ can spit out when $se$ is applied to $e$
+  | $\mathsf{app}_{P}(se,e)$ : exn packets that $se$ can spit out when $se$ is applied to $e$
   | $\mathsf{con}(\kappa,se)$ : construct
   | $\mathsf{exn}(\kappa,se)$ : exception
   | $\mathsf{fld}(se, l)$ : contents of the field $l$ of a record $se$
@@ -81,7 +78,7 @@
 The definition of the conditional set expression needs clarification.
 
 \[
-  se_{1} \Rightarrow se_{2} \coloneq
+  (se_{1} \Rightarrow se_{2}) \coloneq
   \begin{cases}
     \varnothing & (se_{1}=\varnothing)\\
     se_{2} & (o.w)
@@ -89,158 +86,173 @@ The definition of the conditional set expression needs clarification.
 \]
 
 The conditional set expression is a naive approximation for pattern matching. Consider the case when we want to match an expression against the record pattern with fields $x$ and $y$.
-The constraints describing the record $r = \{x = 1, y = 2\}$ are $1 \subseteq \mathsf{fld}(V_{r}, x) \wedge 2 \subseteq \mathsf{fld}(V_{r}, y)$.
-To pattern-match $r$ against $\{x, y\}$, we want the fields $x$ and $y$ of $V_{r}$ to be nonempty.
-Thus, the value of ``$match\:r\:with\:\{x, y\}\rightarrow e$'' is $\mathsf{fld}(V_{r}, x)\Rightarrow(\mathsf{fld}(V_{r},y)\Rightarrow V_{e})$.
+The constraints describing the record $r = \{x = 1, y = 2\}$ are $1 \subseteq \mathsf{fld}(V(r,\sigma_{r}), x) \wedge 2 \subseteq \mathsf{fld}(V(r,\sigma_{r}), y)$ with $\sigma_{r}=[r\mapsto\{x=1, y=2\}]$.
+To pattern-match $r$ against $\{x, y\}$, we want the fields $x$ and $y$ of $V(r,\sigma_{r})$ to be nonempty.
+Thus, the value of ``$match\:r\:with\:\{x, y\}\rightarrow e$'' is $\mathsf{fld}(V(r,\sigma_{r}), x)\Rightarrow(\mathsf{fld}(V(r,\sigma_{r}),y)\Rightarrow V(e,\sigma_{e}))$.
 
 The conditional set expression can also be used to define conditional set constraints \cite{Aik99}.
 \[
-  se \Rightarrow \bigwedge_{i=1}^{n}{X_{i}\subseteq Y_{i}} \coloneq \bigwedge_{i=1}^{n}{(se \Rightarrow X_{i}) \subseteq Y_{i}}
+  \left(se \Rightarrow \left(\bigwedge_{i=1}^{n}{X_{i}\subseteq Y_{i}}\right)\right) \coloneq \bigwedge_{i=1}^{n}{(se \Rightarrow X_{i}) \subseteq Y_{i}}
 \]
 
 \section{Constructing set constraints}
 
 Now we are in a position to define constraint construction rules for our ReScript-like language. Hopefully this would be reasonably fast when implemented and be accurate enough...
 
+Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable, $\Sigma_{x}$: environment variable, all \textit{Expr}s are tagged with their location
+
 \begin{center}
 \begin{prooftree}
-    \infer[left label={[UNIT, INT, BOOL]}]0[$c=(),n,b$] {\rhd c \colon V_{e}\supseteq c}
+    \infer[left label={[UNIT, INT, BOOL]}]0[$c=(),n,b$] {[]\rhd c \colon V(e,\sigma)\supseteq c}
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e_{1} \colon C_{1}}
-  \hypo{\rhd e_{2} \colon C_{2}}
-  \infer[left label={[APP]}]2{\rhd e_{1} \: e_{2} \colon (V_{e}\supseteq \mathsf{body}_{V}(V_{e_{1}}))\wedge
-    (P_{e}\supseteq (\mathsf{body}_{P}(V_{e_{1}}) \cup P_{e_{1}} \cup P_{e_{2}})) \wedge
-    (\mathsf{par}(V_{e_{1}}) \supseteq V_{e_{2}})\wedge
+  \hypo{\sigma_{1}\rhd e_{1} \colon C_{1}}
+  \hypo{\sigma_{2}\rhd e_{2} \colon C_{2}}
+  \infer[left label={[APP]}]2{
+    {\begin{array}{r l}\sigma\rhd e_{1} \: e_{2} \colon & V(e,\sigma)\supseteq \mathsf{app}_{V}(V(e_1,\sigma_{1}),e_2) \: \wedge \\ &
+    P(e,\sigma)\supseteq \mathsf{app}_{P}(V(e_1,\sigma_1),e_2) \cup P(e_1,\sigma_1) \cup P(e_2,\sigma_2) \wedge
     C_{1}\wedge
-    C_{2}}
+    C_{2}\end{array}}}
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e' \colon C'}
-  \infer[left label={[FN]}]1{\rhd \lambda x.e' \colon (V_{e}\supseteq \lambda x.e')\wedge
-    (\mathsf{body}_{V}(V_{e})\supseteq V_{e'})\wedge
-    (\mathsf{body}_{P}(V_{e})\supseteq P_{e'})\wedge
-    (\mathsf{par}(V_{e})\subseteq V_{x})\wedge
-    C'}
+  \hypo{\sigma \cup [x\mapsto E_x] \rhd e' \colon C'}
+  \infer[left label={[FN]}]1{
+    {\begin{array}{r l}
+    \sigma \rhd \lambda x.e' \colon V(e,\sigma)\supseteq \langle\lambda x.e',\sigma\rangle \: \wedge &
+    \mathsf{app}_{V}(\langle\lambda x.e',\sigma\rangle,E_x)\supseteq V(e',[x\mapsto E_x] \cup \sigma) \: \wedge \\ &
+    \mathsf{app}_{P}(\langle\lambda x.e',\sigma\rangle,E_x)\supseteq P(e',[x\mapsto E_x] \cup \sigma) \wedge
+    C'
+    \end{array}}}
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e_1 \colon C_1}
-  \hypo{\rhd e_2 \colon C_2}
-  \infer[left label={[LET]}]2{\rhd let \: x=e_1 \: in \: e_2 \colon
-    (V_x \supseteq V_{e_1})\wedge
-    (V_e \supseteq V_{e_2})\wedge
-    (P_e \supseteq P_{e_1} \cup P_{e_2})\wedge
-    C_1\wedge
-    C_2
+  \infer[left label={[VAR]}]0{
+    \sigma \rhd x \colon V(x, \sigma)\supseteq V(\sigma(x),\Sigma_x)}
+\end{prooftree}
+\vspace{0.2cm}
+
+\begin{prooftree}
+  \hypo{\sigma_1 \cup \overbrace{[x \mapsto e_1]}^{\text{support rec}} \rhd e_1 \colon C_1}
+  \hypo{\sigma_2 \cup [x \mapsto e_1] \rhd e_2 \colon C_2}
+  \infer[left label={[LET]}]2{
+    {\begin{array}{r l}
+    \sigma\rhd \text{let }x=e_1 \text{ in } e_2 \colon
+    & V(e,\sigma) \supseteq V(e_2, \sigma_2 \cup [x \mapsto e_1])\:\wedge \\
+    & P(e,\sigma) \supseteq P(e_1, \sigma_1 \cup [x \mapsto e_1]) \cup P(e_2, \sigma_2 \cup [x \mapsto e_1])\wedge
+    C_1\wedge C_2
+    \end{array}}
     }
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e_1 \colon C_1}
-  \hypo{\rhd e_2 \colon C_2}
-  \infer[left label={[BOP]}]2{\rhd e_1 \: \mathsf{bop} \: e_2 \colon
-    (V_e \supseteq \mathsf{bop}(V_{e_1}, V_{e_2}))\wedge
-    (P_e \supseteq P_{e_1}\cup P_{e_2})\wedge
-    \underbrace{(P_e \supseteq (V_{e_2}\cap 0 \Rightarrow \mathsf{exn}(\mathsf{Divide\_by\_zero}, ())))}_{\text{when bop is }\div}\wedge
-    C_1 \wedge
-    C_2}
+  \hypo{\sigma_1 \rhd e_1 \colon C_1}
+  \hypo{\sigma_2 \rhd e_2 \colon C_2}
+  \infer[left label={[BOP]}]2{
+    {\begin{array}{r l}
+       \sigma \rhd e_1 \: \mathsf{bop} \: e_2 \colon
+       & V(e,\sigma) \supseteq \mathsf{bop}(V(e_1,\sigma_1), V(e_2,\sigma_2))\:\wedge \\
+       & P(e,\sigma) \supseteq P(e_1,\sigma_1)\cup P(e_2,\sigma_2)\wedge
+       \underbrace{P(e,\sigma) \supseteq (V(e_2,\sigma_2)\cap 0 \Rightarrow \mathsf{exn}(\mathsf{Divide\_by\_zero}, ()))}_{\text{when bop is }\div}\wedge
+       C_1 \wedge C_2
+    \end{array}}}
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e' \colon C'}
-  \infer[left label={[CON]}]1{\rhd \mathsf{con}\: \kappa \: e'\colon
-    (V_e \supseteq \mathsf{con}(\kappa , V_{e'}))\wedge
-    (P_e \supseteq P_{e'})\wedge
+  \hypo{\sigma \rhd e' \colon C'}
+  \infer[left label={[CON]}]1{\sigma \rhd \mathsf{con}\: \kappa \: e'\colon
+    V(e,\sigma) \supseteq \mathsf{con}(\kappa , V(e',\sigma))\wedge
+    P(e,\sigma) \supseteq P(e',\sigma)\wedge
     C'}
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e' \colon C'}
-  \infer[left label={[EXN]}]1{\rhd \mathsf{exn}\: \kappa \: e' \colon
-    (V_e \supseteq \mathsf{exn}(\kappa, V_{e'}))\wedge
-    (P_e \supseteq P_{e'})\wedge
+  \hypo{\sigma \rhd e' \colon C'}
+  \infer[left label={[EXN]}]1{\sigma \rhd \mathsf{exn}\: \kappa \: e' \colon
+    V(e,\sigma) \supseteq \mathsf{exn}(\kappa, V(e',\sigma))\wedge
+    P(e,\sigma) \supseteq P(e',\sigma)\wedge
     C'}
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e' \colon C'}
-  \infer[left label={[DECON]}]1[as in SML-NJ's Lambda]{\rhd \mathsf{decon}\:\kappa\: e' \colon
-    (V_e \supseteq
-    \mathsf{con}^{-1}_{(2)}(\underbrace{V_{e'}\cap \mathsf{con}(\kappa, \_)}_{\text{filter}})
-    \cup
-    \mathsf{exn}^{-1}_{(2)}(\underbrace{V_{e'}\cap \mathsf{exn}(\kappa, \_)}_{\text{filter}}))\wedge
-    (P_e \supseteq P_{e'})\wedge
-    C'}
+  \hypo{\sigma \rhd e' \colon C'}
+  \infer[left label={[DECON]}]1[as in SML-NJ's Lambda]{
+    {\begin{array}{r l}
+       \sigma\rhd \mathsf{decon}\:\kappa\: e' \colon &
+       V(e,\sigma) \supseteq
+       \mathsf{con}^{-1}_{(2)}(\underbrace{V(e',\sigma)\cap \mathsf{con}(\kappa, \_)}_{\text{filter}})
+       \cup
+       \mathsf{exn}^{-1}_{(2)}(\underbrace{V(e',\sigma)\cap \mathsf{exn}(\kappa, \_)}_{\text{filter}})\:\wedge \\
+       & P(e,\sigma) \supseteq P(e',\sigma) \wedge
+       C'
+     \end{array}}}
 \end{prooftree}
 
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e_i \colon C_i \: (1 \leq i \leq n)}
-  \infer[left label={[RECORD]}]1{\rhd \{l_1=e_i,...,l_n=e_n\} \colon
-    \bigwedge_{i=1}^{n}{(\mathsf{fld}(V_e, l_i) \supseteq V_{e_i})}\wedge
-    (P_e \supseteq \bigcup_{i=1}^{n}{P_{e_i}})\wedge
+  \hypo{\sigma_{i}\rhd e_i \colon C_i \: (1 \leq i \leq n)}
+  \infer[left label={[RECORD]}]1{\sigma \rhd \{l_1=e_i,...,l_n=e_n\} \colon
+    \bigwedge_{i=1}^{n}{(\mathsf{fld}(V(e,\sigma), l_i) \supseteq V(e_i,\sigma_i))}\wedge
+    P(e,\sigma) \supseteq \bigcup_{i=1}^{n}{P(e_i,\sigma_i)}\wedge
     \bigwedge_{i=1}^{n}{C_i}}
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e' \colon C'}
-  \infer[left label={[FIELD]}]1{\rhd e'.l \colon
-    (V_e \supseteq \mathsf{fld}(V_{e'}, l))\wedge
-    (P_e \supseteq P_{e'})\wedge
+  \hypo{\sigma \rhd e' \colon C'}
+  \infer[left label={[FIELD]}]1{\sigma \rhd e'.l \colon
+    V(e,\sigma) \supseteq \mathsf{fld}(V(e',\sigma), l)\wedge
+    P(e,\sigma) \supseteq P(e',\sigma)\wedge
     C'
   }
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e' \colon C'}
-  \infer[left label={[REF]}]1[new loc]{\rhd \mathsf{ref}\: e' \colon
-    (V_e \supseteq \mathsf{loc})\wedge
-    (\mathsf{cnt}(\mathsf{loc})\supseteq V_{e'})\wedge
-    (P_e \supseteq P_{e'})\wedge
+  \hypo{\sigma\rhd e' \colon C'}
+  \infer[left label={[REF]}]1[new loc]{\sigma \rhd \mathsf{ref}\: e' \colon
+    V(e,\sigma) \supseteq \mathsf{loc} \wedge
+    \mathsf{cnt}(\mathsf{loc})\supseteq V(e',\sigma) \wedge
+    P(e,\sigma) \supseteq P(e',\sigma)\wedge
     C'}
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e_1 \colon C_1}
-  \hypo{\rhd e_2 \colon C_2}
-  \infer[left label={[UPDATE]}]2{\rhd e_1 := e_2 \colon
-    (\mathsf{cnt}(V_{e_1})\supseteq V_{e_2})\wedge
-    (P_e \supseteq P_{e_1}\cup P_{e_2})\wedge
+  \hypo{\sigma_1 \rhd e_1 \colon C_1}
+  \hypo{\sigma_2 \rhd e_2 \colon C_2}
+  \infer[left label={[UPDATE]}]2{\sigma \rhd e_1 := e_2 \colon
+    \mathsf{cnt}(V(e_1,\sigma_1))\supseteq V(e_2,\sigma_2) \wedge
+    P_e \supseteq P(e_1,\sigma_1)\cup P(e_2,\sigma_2)\wedge
     C_1 \wedge
     C_2}
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e' \colon C'}
-  \infer[left label={[BANG]}]1{\rhd !e' \colon
-    (V_e \supseteq \mathsf{cnt}(V_{e'}))\wedge
-    (P_e \supseteq P_{e'})\wedge
+  \hypo{\sigma \rhd e' \colon C'}
+  \infer[left label={[BANG]}]1{\sigma \rhd !e' \colon
+    V(e,\sigma) \supseteq \mathsf{cnt}(V(e',\sigma))\wedge
+    P(e,\sigma) \supseteq P(e',\sigma)\wedge
     C'}
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e_1 \colon C_1}
-  \hypo{\rhd e_2 \colon C_2}
-  \infer[left label={[SEQ]}]2{\rhd e_1 ; e_2 \colon
-    (V_e \supseteq V_{e_2})\wedge
-    (V_{e_1} \supseteq ())\wedge
-    (P_e \supseteq P_{e_1}\cup P_{e_2})\wedge
+  \hypo{\sigma_1 \rhd e_1 \colon C_1}
+  \hypo{\sigma_2 \rhd e_2 \colon C_2}
+  \infer[left label={[SEQ]}]2{\sigma \rhd e_1 ; e_2 \colon
+    V(e,\sigma) \supseteq V(e_2,\sigma_2)\wedge
+    P(e,\sigma) \supseteq P(e_1,\sigma_1)\cup P(e_2,\sigma_2)\wedge
     C_1 \wedge
     C_2
   }
@@ -248,26 +260,23 @@ Now we are in a position to define constraint construction rules for our ReScrip
 \end{center}
 
 We define an auxilary function for generating constraints out of pattern matching.
-If we want to figure out the constraint for the value $X$ of ``$\mathsf{match}\: Y \: \mathsf{with}\: p\rightarrow e$'':
+If we want to figure out the constraint for the expression $e=$ ``$\mathsf{match}\: e' \: \mathsf{with}\: p\rightarrow e''$'' under $\sigma$:
 
 \[
-\mathsf{case}(X,Y,p,e)\coloneq
+\mathsf{case}(e',\sigma,p,e'')\coloneq
 \begin{cases}
-  (Y\subseteq V_{x})\wedge (V_{e}\subseteq X) & (p=x)\\
-  (\mathsf{fld}(Y, l_{1})\Rightarrow ... \Rightarrow \mathsf{fld}(Y, l_{n})\Rightarrow V_{e}) \subseteq X & (p=\left\{l_{i}\right\}_{i=1}^{n})\\
-  (\kappa \cap (\mathsf{con}^{-1}_{(1)}(Y)\cup\mathsf{exn}^{-1}_{(1)}(Y)))\Rightarrow V_{e} \subseteq X & (p=\kappa)\\
-  (Y \cap c)\Rightarrow V_{e} \subseteq X & (p=\mathsf{constant})\\
-  V_{e}\subseteq X & (p = \_)
+  V(e,\sigma) \supseteq V(e'',\sigma\vbar_{e''} \cup [x \mapsto e']) & (p=x)\\
+  V(e,\sigma) \supseteq V(e'',\sigma\vbar_{e''}) & (o.w)
 \end{cases}
 \]
 
 \begin{center}
 \begin{prooftree}
-  \hypo{\rhd e' \colon C'}
-  \hypo{\rhd e_i \colon C_i \: (1\leq i \leq n)}
-  \infer[left label={[CASE]}]2{\rhd \mathsf{case}\: e' \: \left(p_i \rightarrow e_i\right)_{i=1}^{n}\colon
-    \bigwedge_{i=1}^{n}\mathsf{case}(V_{e}, V_{e'}, p_i, e_i)\wedge
-    (P_e \supseteq \bigcup_{i=1}^{n}P_i \cup P_{e'})\wedge
+  \hypo{\sigma\vbar_{e'}\rhd e' \colon C'}
+  \hypo{\sigma_{i}\rhd e_i \colon C_i \: (1\leq i \leq n)}
+  \infer[left label={[CASE]}]2{\sigma\rhd \mathsf{case}\: e' \: \left(p_i \rightarrow e_i\right)_{i=1}^{n}\colon
+    \bigwedge_{i=1}^{n}\mathsf{case}(e',\sigma,p_i,e_i)\wedge
+    P(e,\sigma) \supseteq \bigcup_{i=1}^{n}P(e_i,\sigma_i) \cup P(e',\sigma\vbar_{e'})\wedge
     C'\wedge
     \bigwedge_{i=1}^{n}C_i
   }
@@ -275,119 +284,137 @@ If we want to figure out the constraint for the value $X$ of ``$\mathsf{match}\:
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e' \colon C'}
-  \hypo{\rhd e_i \colon C_i \: (1\leq i \leq n)}
-  \infer[left label={[HANDLE]}]2{\rhd \mathsf{handle}\: e' \: \left(p_i \rightarrow e_i\right)_{i=1}^{n}\colon
-    (P_e \supseteq (P_{e'}\cap\bigcap_{i=1}^{n}\loverbar{\mathsf{exn}(p_i, \_)})\cup \bigcup_{i=1}^{n}P_{e_i})\wedge
-    (V_e \supseteq V_{e'}\cup \bigcup_{i=1}^{n}{V_{e_i}})\wedge
-    C'\wedge
-    \bigwedge_{i=1}^{n}C_i
+  \hypo{\sigma\vbar_{e'}\rhd e' \colon C'}
+  \hypo{\sigma_{i}\rhd e_i \colon C_i \: (1\leq i \leq n)}
+  \infer[left label={[HANDLE]}]2{
+    {\begin{array}{r l}
+       \sigma\rhd \mathsf{handle}\: e' \: \left(p_i \rightarrow e_i\right)_{i=1}^{n}\colon
+       &P(e,\sigma) \supseteq (P(e',\sigma\vbar_{e'})\cap\bigcap_{i=1}^{n}\loverbar{\mathsf{exn}(p_i, \_)})\cup \bigcup_{i=1}^{n}P(e_i,\sigma_i)\:\wedge\\
+       &V(e,\sigma) \supseteq V(e',\sigma\vbar_{e'})\cup \bigcup_{i=1}^{n}{V(e_i,\sigma_i)}\:\wedge\\
+       &C'\wedge \bigwedge_{i=1}^{n}C_i
+    \end{array}}
   }
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e' \colon C'}
-  \infer[left label={[RAISE]}]1{\rhd \mathsf{raise}\: e' \colon
-    (P_e \supseteq V_{e_1}\cup P_{e_1})\wedge
+  \hypo{\sigma\rhd e' \colon C'}
+  \infer[left label={[RAISE]}]1{\sigma\rhd \mathsf{raise}\: e' \colon
+    P(e,\sigma) \supseteq V(e',\sigma)\cup P(e',\sigma)\wedge
     C'
   }
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e_1 \colon C_1}
-  \hypo{\rhd e_2 \colon C_2}
-  \hypo{\rhd e_3 \colon C_3}
-  \infer[left label={[FOR]}]3{
+  \hypo{\sigma_1 \rhd e_1 \colon C_1}
+  \hypo{\sigma_2 \rhd e_2 \colon C_2}
+  \hypo{\sigma_3 \cup [x \mapsto e_1] \rhd e_3 \colon C_3}
+  \hypo{\sigma_3 \cup [x \mapsto x+1] \rhd e_3 \colon C_4}
+  \infer[left label={[FOR]}]4{
     {\begin{array}{r l}
-       \rhd \mathsf{for\:}x\: e_1\: e_2\: e_3 \colon &
-       (>(V_x , V_{e_1})\cap \mathtt{true} \Rightarrow ()\subseteq V_e)\\
-       &\wedge (>(V_x, V_{e_1})\cap \mathtt{false} \Rightarrow (C_3 \wedge (V_x \supseteq +(V_x, 1)) \wedge (P_e \supseteq P_{e_3})))\\
-       &\wedge (V_{x}\supseteq V_{e_1})
-       \wedge (P_e \supseteq P_{e_1}\cup P_{e_2})\wedge
-       C_1 \wedge C_2
+       \sigma \rhd \mathsf{for\:}x\: e_1\: e_2\: e_3 \colon
+       &V(e,\sigma) \supseteq () \wedge V(x, [x \mapsto e_1]) \supseteq V(e_1, \sigma_1) \: \wedge \\
+       &V(x, [x \mapsto x+1]) \supseteq +(V(e_1, \sigma_1), 1) \cup +(V(x, [x\mapsto x + 1]), 1)\: \wedge\\
+       &P(e,\sigma) \supseteq P(e_1, \sigma_1)\cup P(e_2,\sigma_2)\cup P(e_3,\sigma_3 \cup [x \mapsto e_1]) \cup P(e_3, \sigma_3 \cup [x \mapsto x + 1])\:\wedge\\
+       &C_1 \wedge C_2 \wedge C_3 \wedge C_4
     \end{array}}
   }
 \end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
-  \hypo{\rhd e_1 \colon C_1}
-  \hypo{\rhd e_2 \colon C_2}
+  \hypo{\sigma_1 \rhd e_1 \colon C_1}
+  \hypo{\sigma_2 \rhd e_2 \colon C_2}
   \infer[left label={[WHILE]}]2{
-    {\begin{array}{r l}
-       \rhd \mathsf{while\:}e_1 \: e_2 \colon &
-       (V_{e_1}\cap \mathtt{true})\Rightarrow (C_2 \wedge (P_e \supseteq P_{e_2}))\\
-       &\wedge ((V_{e_1}\cap \mathtt{false})\Rightarrow ()\subseteq V_e) \wedge (P_e \supseteq P_{e_1}) \wedge C_1
-    \end{array}}
-  }
+       \sigma \rhd \mathsf{while\:}e_1 \: e_2 \colon
+       V(e,\sigma) \supseteq () \wedge P(e,\sigma) \supseteq P(e_1,\sigma_1)\cup P(e_2,\sigma_2) \wedge C_1 \wedge C_2}
 \end{prooftree}
 \end{center}
 
-\section{Conditional expressions : a good approximation?}
-
-Case expressions are the cause for inaccuracy in approximating the program states. Take a look at the for loop.
-\begin{figure}[htb]
-\centering
-\begin{BVerbatim}
-let for x = match x > e2 with
-            | true -> ()
-            | false -> e3; for (x + 1)
-in
-for e1
-\end{BVerbatim}
-\end{figure}
-
-The above program is equivalent to \texttt{for x = e1 to e2 do e3 done}. Translating this to set constraints is difficult as case statements partition the program states.
-That is, ``\texttt{e3; for (x + 1)}'' is evaluated under the constraint that $>(V_{x},V_{e_{2}})\subseteq \mathtt{false}$ and ``\texttt{()}'' is evaluated under the constraint that $>(V_{x}, V_{e_{2}})\subseteq \mathtt{true}$.
-
-These constraints obviously cannot be \texttt{and}-ed together, as the partitions are mutually disjoint. In other words, $x > e_{2}$ cannot evaluate to both true and false at the same time. Thus, it is straightforward that each set expression must have different ``versions'' of itself in each partition. Each case statement creates a ``parallel world'' where some set constraint becomes true.
-
-The conditional expression approximation is very coarse, as can be observed in the [FOR] rule in section 2. Assume that $e_{1}=1$, $e_{2}=5$, $e_{3}=()$. Since $1\subseteq V_{x}$, $\mathtt{false}\subseteq >(V_{x}, 5)\subseteq >(V_{x}, V_{e_{2}})$, so the conditional expression is activated. Then $V_{x}\supseteq +(V_{x}, 1)$ becomes valid. Then the least model must map $V_{x}$ to $\{x\in\mathbb{Z}\vbar x \ge 1\}$. This overshoots the possible values that $x$ may have, which is $\{1, 2, 3, 4, 5, 6\}$.
-
-Why does this happen? It is because in the condition $V_{x}\supseteq +(V_{x}, 1)$, the $V_{x}$-s in different sides are in different partitions. The $V_{x}$ on the left-hand side can be in either partition, as it is not matched against any pattern yet. However, the $V_{x}$ on the right-hand side must be in the partition where $x>e_{2}$ is matched against $\mathtt{false}$.
-
-Then when are conditional expressions successful? In the case when $e_{1}=5$ and $e_{2}=1$, for example, the conditional expression eliminates the treacherous condition $V_{x}\supseteq +(V_{x}, 1)$. In the context of exception analysis, $P_{e}\supseteq P_{e_{3}}$ is not considered at all, so the analysis is a bit more accurate. That is, only when the program doesn't lay a foot on the wrong path is when conditional expressions succeed.
-
-The obvious problem is that programs are often written so that all cases are reachable, maybe except for the case when some value is divided by a nonzero constant. Then the question is whether conditional expressions in the [CASE, FOR, WHILE] rules actually decrease false alarms. When implementing the analyzer it might not be a bad idea to eliminate the conditional expressions.
-
-If the conditional expressions are eliminated, then the case function changes to
+\section{Example}
 
 \[
-\mathsf{case}(X,Y,p,e)\coloneq
-\begin{cases}
-  (Y\subseteq V_{x})\wedge (V_{e}\subseteq X) & (p=x)\\
-  V_{e} \subseteq X & (o.w)
-\end{cases}
+\underbrace{\text{let }f = \overbrace{\lambda x.\underbrace{\text{Error } \overbrace{(\underbrace{f}_{e_{11}''} \underbrace{x}_{e_{12}''})}^{e_{1}''}}_{e_{1}'}}^{e_{1}}\text{ in }\overbrace{\text{raise } \underbrace{(\overbrace{f}^{e_{21}'} \overbrace{\text{Fail}}^{e_{22}'})}_{e_{2}'}}^{e_{2}}}_{e}
 \]
 
-and the [FOR, WHILE] rules become
+The above program is type checked as $f:\mathsf{exn}\rightarrow \mathsf{exn}$, yet it does not terminate. The (simplified) set constraints generated for this program are:
 
-\begin{center}
-\begin{prooftree}
-  \hypo{\rhd e_1 \colon C_1}
-  \hypo{\rhd e_2 \colon C_2}
-  \hypo{\rhd e_3 \colon C_3}
-  \infer[left label={[FOR]}]3{
-    {\begin{array}{r l}
-       \rhd \mathsf{for\:}x\: e_1\: e_2\: e_3 \colon
-       &(V_e \supseteq ()) \wedge (V_x \supseteq +(V_x, 1) \cup V_{e_1})\\
-       &\wedge (P_e \supseteq P_{e_1}\cup P_{e_2}\cup P_{e_3})\wedge
-       C_1 \wedge C_2 \wedge C_3
-    \end{array}}
-  }
-\end{prooftree}
-\vspace{0.2cm}
+\[
+\begin{array}{l c c c}
+  \text{Constraint} & \text{From} & \text{By} & \text{No.}\\
+  \hline
+  P(e, []) \supseteq P(e_{2},[f\mapsto e_{1}]) & e & \text{[LET]} & (1)\\
+  V(e_{1},[f\mapsto e_{1}]) \supseteq \langle \lambda x.e_{1}' , [f \mapsto e_{1}]\rangle & e_{1} & \text{[FN]} & (2)\\
+  \mathsf{app}_{V}(\langle \lambda x.e_{1}' , [f \mapsto e_{1}]\rangle, E_{x}) \supseteq V(e_{1}',[f \mapsto e_{1};x \mapsto E_{x}]) & e_{1} & \text{[FN]} & (3)\\
+  V(e_{1}',[f \mapsto e_{1};x \mapsto E_{x}]) \supseteq \mathsf{exn}(\text{Error},V(e_{1}'', [f \mapsto e_{1};x \mapsto E_{x}])) & e_{1}' & \text{[EXN]} & (4)\\
+  V(e_{1}'',[f \mapsto e_{1};x \mapsto E_{x}]) \supseteq \mathsf{app}_{V}(V(e_{11}'', [f \mapsto e_{1}]), e_{12}'') & e_{1}'' & \text{[APP]} & (5)\\
+  V(e_{11}'', [f \mapsto e_{1}]) \supseteq V(e_{1},\Sigma_{f}) & e_{11}'' & \text{[VAR]} & (6)\\
+  V(e_{12}'', [x \mapsto E_{x}]) \supseteq V(E_{x},\Sigma_{x}) & e_{12}'' & \text{[VAR]} & (7)\\
+  P(e_{2},[f \mapsto e_{1}]) \supseteq V(e_{2}',[f \mapsto e_{1}]) & e_{2} & \text{[RAISE]} & (8)\\
+  V(e_{2}', [f \mapsto e_{1}]) \supseteq \mathsf{app}_{V}(V(e_{21}', [f \mapsto e_{1}]), e_{22}') & e_{2}' & \text{[APP]} & (9)\\
+  V(e_{21}', [f \mapsto e_{1}]) \supseteq V(e_{1},\Sigma_{f}) & e_{21}' & \text{[VAR]} & (10)\\
+  V(e_{22}', []) \supseteq \mathsf{exn}(\text{Fail}, ()) & e_{22}' & \text{[EXN]} & (11)
+\end{array}
+\]
 
-\begin{prooftree}
-  \hypo{\rhd e_1 \colon C_1}
-  \hypo{\rhd e_2 \colon C_2}
-  \infer[left label={[WHILE]}]2{
-       \rhd \mathsf{while\:}e_1 \: e_2 \colon
-       (V_e \supseteq ()) \wedge (P_e \supseteq P_{e_1}\cup P_{e_2}) \wedge C_1 \wedge C_2}
-\end{prooftree}
-\end{center}
+To ``solve'' this system of constraints, multiple reduction steps are needed.
+
+\begin{enumerate}
+  \item
+        \begin{align*}
+          V(e_{2}',[f \mapsto e_{1}])
+          &\supseteq \mathsf{app}_{V}(V(e_{21}',[f \mapsto e_{1}]),e_{22}') & (\because (9))\\
+          &\supseteq \mathsf{app}_{V}(V(e_{1},\Sigma_{f}),e_{22}') & (\because (10))\\
+          &\supseteq \mathsf{app}_{V}(V(e_{1},[f\mapsto e_{1}]),e_{22}') & (\text{unify with }(2))\\
+          &\supseteq \mathsf{app}_{V}(\langle \lambda x. e_{1}',[f \mapsto e_{1}]\rangle , e_{22}') & (\because (2))\\
+          &\supseteq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}']) & (\because (3))
+        \end{align*}
+  \item
+        \begin{align*}
+          V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}'])
+          &\supseteq \mathsf{exn}(\text{Error},V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}'])) & (\because (4))
+        \end{align*}
+  \item
+        \begin{align*}
+          V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}'])
+          &\supseteq \mathsf{app}_{V}(V(e_{11}'',[f\mapsto e_{1}]),e_{12}'') & (\because (5))\\
+          &\supseteq \mathsf{app}_{V}(V(e_{1},\Sigma_{f}),e_{12}'') & (\because (6))\\
+          &\supseteq \mathsf{app}_{V}(V(e_{1},[f\mapsto e_{1}]),e_{12}'') & (\text{unify with }(2))\\
+          &\supseteq \mathsf{app}_{V}(\langle \lambda x.e_{1}',[f\mapsto e_{1}]\rangle,e_{12}'') & (\because (2))\\
+          &\supseteq V(e_{1}',[f \mapsto e_{1};x \mapsto e_{12}'']) & (\because (3))
+        \end{align*}
+  \item
+        \begin{align*}
+          V(e_{1}',[f \mapsto e_{1};x \mapsto e_{12}''])
+          &\supseteq \mathsf{exn}(\text{Error},V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}''])) & (\because (4))
+        \end{align*}
+  \item
+        \begin{align*}
+          V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}''])
+          &\supseteq \mathsf{app}_{V}(V(e_{11}'',[f\mapsto e_{1}]),e_{12}'') & (\because (5))\\
+          &\supseteq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{12}'']) & (\text{as in }3)
+        \end{align*}
+  \item Cannot reduce further as $V(e_{1}',[f \mapsto e_{1};x\mapsto e_{12}''])$ was already reduced in 4.
+\end{enumerate}
+
+Let $X_{1}\coloneq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}'])$, $X_{2}\coloneq V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}'])$, $X_{3}\coloneq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{12}''])$, $X_{4}\coloneq V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}''])$. Then the equations reduce to:
+
+\begin{align*}
+  P(e,[])\supseteq P(e_{2},[f\mapsto e_{1}])&\supseteq V(e_{2}',[f\mapsto e_{1}]) & (\because (1),(8))\\
+  V(e_{2}',[f\mapsto e_{1}])&\supseteq X_{1} & (\because 1)\\
+  \Rightarrow P(e,[])&\supseteq X_{1} & \\
+  X_{1}&\supseteq \mathsf{exn}(\text{Error},X_{2}) & (\because 2)\\
+  X_{2}&\supseteq X_{3} & (\because 3)\\
+  X_{3}&\supseteq \mathsf{exn}(\text{Error},X_{4}) & (\because 4)\\
+  X_{4}&\supseteq X_{3} & (\because 5)
+\end{align*}
+
+Note that constraint (7) was not used in the derivation of the above relations. This reflects the fact that the program does not terminate. There is absolutely no execution path evaluating what ``Fail'' is.
+
+\section{Why $\sigma$?}
+
+Wrapper function around raise. $e$ is actually the location in code. Need a hash table between $e$ and location.
 
 TODO:
 \begin{enumerate}
