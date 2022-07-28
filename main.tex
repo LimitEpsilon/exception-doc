@@ -51,6 +51,24 @@
 \begin{document}
 \maketitle
 \section{Definition of set expressions}
+
+This proposal extends upon the results of \cite{YiRyu97} and attempts to address the limitations of the tool \textit{ReAnalyze}.
+
+In \cite{YiRyu97}, the set-based constraint solving method for program analysis is used to track unhandled exceptions.
+However, the analysis simply collects all instances of a function being called.
+This is appropriate when there are no wrapper functions for \textsf{raise}.
+The sad fact is that there are multiple functions that can serve as \textsf{raise} in ReScript programs; when those functions are used, the original method leads to impractical conclusions.
+The analysis will always warn that all raised exceptions might be raised in every location.
+Thus, the set variables must keep track of where the arguments to the functions were supplied.
+This is why our definition of the set variable corresponding to the expression $e$ is extended from $V_{e},P_{e}$ to $V(e,\sigma),P(e,\sigma)$.
+$\sigma$ maps free variables in $e$ to code locations where the arguments were supplied.
+
+In \textit{ReAnalyze}, when exceptions are not raised explicitly, it fails to analyze what kind of exceptions might be raised.
+An example is when exception values are wrapped inside a variant \textsf{Error e} and is raised as \textsf{raise e}.
+This is addressed by adding $\sigma$ to set variables and tracking the possible values of expressions, not only the possible exception packets that might be raised.
+Also, when there is a division operator, \textit{Reanalyze} alerts that \textsf{Divide\_by\_zero} might be raised regardless of the denominator.
+This is addressed by adding conditional set constraints and tracking whether the denominator might turn to 0.
+
 \begin{bnfgrammar}
   $se$ ::= $\varnothing$ : empty set
   | $\_$ : maximum set
@@ -398,7 +416,7 @@ To ``solve'' this system of constraints, multiple reduction steps are needed.
   \item Cannot reduce further as $V(e_{1}',[f \mapsto e_{1};x\mapsto e_{12}''])$ was already reduced in 4.
 \end{enumerate}
 
-Let $X_{1}\coloneq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}'])$, $X_{2}\coloneq V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}'])$, $X_{3}\coloneq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{12}''])$, $X_{4}\coloneq V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}''])$. Then the equations reduce to:
+Let $X_{1}\coloneq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}'])$, $X_{2}\coloneq V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}'])$, $X_{3}\coloneq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{12}''])$, $X_{4}\coloneq V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}''])$. Then the constraints reduce to:
 
 \begin{align*}
   P(e,[])\supseteq P(e_{2},[f\mapsto e_{1}])&\supseteq V(e_{2}',[f\mapsto e_{1}]) & (\because (1),(8))\\
@@ -414,12 +432,90 @@ Note that constraint (7) was not used in the derivation of the above relations. 
 
 \section{Why $\sigma$?}
 
-Wrapper function around raise. $e$ is actually the location in code. Need a hash table between $e$ and location.
+Section 3 demonstrated that even with $\sigma$, the set constraints may handle tricky expressions.
+It failed, however, to demonstrate how it improves upon \cite{YiRyu97}.
+In this section, an example program demonstrates how the accuracy of analysis is improved by separating when functions are called.
 
-TODO:
+\[
+\underbrace{\text{let id}= \overbrace{\lambda x.\underbrace{x}_{e_{1}'}}^{e_{1}} \text{ in }\overbrace{\underbrace{\overbrace{\text{id}}^{e_{211}}\overbrace{1}^{e_{212}}}_{e_{21}} + \underbrace{\overbrace{\text{id}}^{e_{221}}\overbrace{2}^{e_{222}}}_{e_{22}}}^{e_{2}}}_{e}
+\]
+
+The original method $\rhd_{1}$ in \cite{YiRyu97} concludes that since id might spit out 1 or 2, (id 1) + (id 2) might be anything in \{1+1, 1+2, 2+1, 2+2\}. However, with $\sigma$, this ambiguity is dispelled.
+
+\[
+  \begin{array}{l c c c}
+    \text{Constraint} & \text{From} & \text{By} & \text{No.}\\
+    \hline
+    V(e,[]) \supseteq V(e_{2},[\text{id} \mapsto e_{1}]) & e & \text{[LET]} & (1)\\
+    V(e_{1},[])\supseteq \langle \lambda x.e_{1}' , [] \rangle & e_{1} & \text{[FN]} & (2)\\
+    \mathsf{app}_{V}(\langle \lambda x.e_{1}', [] \rangle, E_{x}) \supseteq V(e_{1}',[x\mapsto E_{x}]) & e_{1} & \text{[FN]} & (3)\\
+    V(e_{1}',[x \mapsto E_{x}]) \supseteq V(E_{x},\Sigma_{x}) & e_{1}' & \text{[VAR]} & (4)\\
+    V(e_{2},[\text{id}\mapsto e_{1}]) \supseteq +(V(e_{21},[\text{id}\mapsto e_{1}]), V(e_{22},[\text{id}\mapsto e_{1}])) & e_{2} & \text{[BOP]} & (5)\\
+    V(e_{21},[\text{id}\mapsto e_{1}]) \supseteq \mathsf{app}_{V}(V(e_{211},[\text{id}\mapsto e_{1}]),e_{212}) & e_{21} & \text{[APP]} & (6)\\
+    V(e_{211},[\text{id}\mapsto e_{1}]) \supseteq V(e_{1},\Sigma_{\text{id}}) & e_{211} & \text{[VAR]} & (7)\\
+    V(e_{212},[]) \supseteq 1 & e_{212} & \text{[INT]} & (8)\\
+    V(e_{22},[\text{id}\mapsto e_{1}]) \supseteq \mathsf{app}_{V}(V(e_{221},[\text{id}\mapsto e_{1}]),e_{222}) & e_{22} & \text{[APP]} & (9)\\
+    V(e_{221},[\text{id}\mapsto e_{1}]) \supseteq V(e_{1},\Sigma_{\text{id}}) & e_{221} & \text{[VAR]} & (10)\\
+    V(e_{222},[]) \supseteq 2 & e_{222} & \text{[INT]} & (11)
+  \end{array}
+\]
+
 \begin{enumerate}
-  \item How to solve the set constraints(first in the case when there are no conditional expressions) : based on the work of Nevin Heintze\cite{Hei91}
-  \item Maybe, how to formulate the ``parallel worlds'' approach?
+  \item
+        \begin{align*}
+          V(e_{21},[\text{id}\mapsto e_{1}])
+          &\supseteq \mathsf{app}_{V}(V(e_{211},[\text{id}\mapsto e_{1}]),e_{212}) & (\because (6))\\
+          &\supseteq \mathsf{app}_{V}(V(e_{1},\Sigma_{\text{id}}),e_{212}) & (\because (7))\\
+          &\supseteq \mathsf{app}_{V}(\langle \lambda x.e_{1}',[] \rangle, e_{212}) & (\because (2))\\
+          &\supseteq V(e_{1}',[x\mapsto e_{212}]) & (\because (3))
+        \end{align*}
+  \item
+        \begin{align*}
+          V(e_{1}',[x\mapsto e_{212}])
+          &\supseteq V(e_{212},\Sigma_{x}) & (\because (4))\\
+          &\supseteq V(e_{212},[]) & (\text{unify with }(7))\\
+          &\supseteq 1 & (\because (8))
+        \end{align*}
+  \item
+        \begin{align*}
+          V(e_{22},[\text{id}\mapsto e_{1}])
+          &\supseteq \mathsf{app}_{V}(V(e_{221},[\text{id}\mapsto e_{1}]),e_{212}) & (\because (9))\\
+          &\supseteq \mathsf{app}_{V}(V(e_{1},\Sigma_{\text{id}}),e_{222}) & (\because (10))\\
+          &\supseteq \mathsf{app}_{V}(\langle \lambda x.e_{1}',[] \rangle, e_{222}) & (\because (2))\\
+          &\supseteq V(e_{1}',[x\mapsto e_{222}]) & (\because (3))
+        \end{align*}
+  \item
+        \begin{align*}
+          V(e_{1}',[x\mapsto e_{222}])
+          &\supseteq V(e_{222},\Sigma_{x}) & (\because (4))\\
+          &\supseteq V(e_{222},[]) & (\text{unify with }(11))\\
+          &\supseteq 2 & (\because (11))
+        \end{align*}
+\end{enumerate}
+
+If we let $X_{1}\coloneq V(e_{21},[\text{id}\mapsto e_{1}])$, $X_{2}\coloneq V(e_{1}',[x\mapsto e_{212}])$, $X_{3}\coloneq V(e_{22},[\text{id}\mapsto e_{1}])$, $X_{4}\coloneq V(e_{1}',[x\mapsto e_{222}])$, the constraints reduce to:
+
+\begin{align*}
+  V(e,[])\supseteq V(e_{2},[\text{id}\mapsto e_{1}])
+  &\supseteq +(X_{1},X_{3}) & (\because (1),(5))\\
+  \Rightarrow V(e,[])&\supseteq +(X_{1},X_{3}) &\\
+  X_{1}&\supseteq X_{2}&(\because 1)\\
+  X_{2}&\supseteq 1&(\because 2)\\
+  X_{3}&\supseteq X_{4}&(\because 3)\\
+  X_{4}&\supseteq 2&(\because 4)
+\end{align*}
+
+Comments: Note that even though id is called two times, there are two variables corresponding to id, which are $V(e_{211},[\text{id}\mapsto e_{1}])$ and $V(e_{221},[\text{id}\mapsto e_{1}])$.
+This is because expressions are tagged by their location in code.
+In other words, we assume the existence of a hash table between expressions and their locations in code.
+
+Also, note that all constraints are fully utilized in reducing the system of constraints, unlike in the previous section.
+
+\section{TODO}
+\begin{enumerate}
+  \item A proof that the constraint generation rules are sound
+  \item A program to generate (and print) set constraints from the Typedtrees.
+  \item An algorithm to reduce the constraints : based on the work of Nevin Heintze\cite{Hei91}
 \end{enumerate}
 \printbibliography
 \end{document}
