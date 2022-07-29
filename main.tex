@@ -360,7 +360,7 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{try}\
 \section{Example}
 
 \[
-\underbrace{\text{let }f = \overbrace{\lambda x.\underbrace{\text{Error } \overbrace{(\underbrace{f}_{e_{11}''} \underbrace{x}_{e_{12}''})}^{e_{1}''}}_{e_{1}'}}^{e_{1}}\text{ in }\overbrace{\text{raise } \underbrace{(\overbrace{f}^{e_{21}'} \overbrace{\text{Fail}}^{e_{22}'})}_{e_{2}'}}^{e_{2}}}_{e}
+\underbrace{\text{let }f = \overbrace{\lambda x.\underbrace{\text{Error } \overbrace{(\underbracket{f}_{e_{11}''} \underbracket{x}_{e_{12}''})}^{e_{1}''}}_{e_{1}'}}^{e_{1}}\text{ in }\overbrace{\text{raise } \underbrace{(\overbracket{f}^{e_{21}'} \overbracket{\text{Fail}}^{e_{22}'})}_{e_{2}'}}^{e_{2}}}_{e}
 \]
 
 The above program is type checked as $f:\mathsf{exn}\rightarrow \mathsf{exn}$, yet it does not terminate. The (simplified) set constraints generated for this program are:%
@@ -443,7 +443,7 @@ It failed, however, to demonstrate how it improves upon \cite{YiRyu97}.
 In this section, an example program demonstrates how the accuracy of analysis is improved by separating when functions are called.
 
 \[
-\underbrace{\text{let id}= \overbrace{\lambda x.\underbrace{x}_{e_{1}'}}^{e_{1}} \text{ in }\overbrace{\underbrace{\overbrace{\text{id}}^{e_{211}}\overbrace{1}^{e_{212}}}_{e_{21}} + \underbrace{\overbrace{\text{id}}^{e_{221}}\overbrace{2}^{e_{222}}}_{e_{22}}}^{e_{2}}}_{e}
+\underbrace{\text{let id}= \overbrace{\lambda x.\underbracket{x}_{e_{1}'}}^{e_{1}} \text{ in }\overbrace{\underbrace{\overbracket{\text{id}}^{e_{211}}\overbracket{1}^{e_{212}}}_{e_{21}} + \underbrace{\overbracket{\text{id}}^{e_{221}}\overbracket{2}^{e_{222}}}_{e_{22}}}^{e_{2}}}_{e}
 \]
 
 The original method $\rhd_{1}$ in \cite{YiRyu97} concludes that since id might spit out 1 or 2, (id 1) + (id 2) might be anything in \{1+1, 1+2, 2+1, 2+2\}. However, with $\sigma$, this ambiguity is dispelled.
