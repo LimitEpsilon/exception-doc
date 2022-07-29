@@ -7,6 +7,7 @@
  left=20mm,
  top=20mm,
 }
+\usepackage{setspace} % setstretch
 
 \usepackage{graphicx}
 \usepackage{kotex}
@@ -126,13 +127,12 @@ Now we are in a position to define constraint construction rules for our ReScrip
 
 Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable, $\Sigma_{x}$: environment variable, all \textit{Expr}s are tagged with their location
 
-\begin{center}
-\begin{prooftree}
-    \infer[left label={Unit, Int, Bool}]0[$c=(),n,b$] {[]\rhd c \colon V(e,\sigma)\supseteq c}
-\end{prooftree}
-\vspace{0.2cm}
 
-\begin{prooftree}
+\begin{prooftree*}
+    \infer[left label={Unit, Int, Bool}]0[$c=(),n,b$] {[]\rhd c \colon V(e,\sigma)\supseteq c}
+\end{prooftree*}
+
+\begin{prooftree*}
   \hypo{\sigma_{1}\rhd e_{1} \colon C_{1}}
   \hypo{\sigma_{2}\rhd e_{2} \colon C_{2}}
   \infer[left label=App]2{
@@ -140,10 +140,9 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
     P(e,\sigma)\supseteq \mathsf{app}_{P}(V(e_1,\sigma_1),e_2) \cup P(e_1,\sigma_1) \cup P(e_2,\sigma_2) \wedge
     C_{1}\wedge
     C_{2}\end{array}}}
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma \cup [x\mapsto E_x] \rhd e' \colon C'}
   \infer[left label=Fn]1{
     {\begin{array}{r l}
@@ -152,20 +151,21 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
     \mathsf{app}_{P}(\langle\lambda x.e',\sigma\rangle,E_x)\supseteq P(e',[x\mapsto E_x] \cup \sigma) \wedge
     C'
     \end{array}}}
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
+\[
 \begin{prooftree}
   \infer[left label=Var]0{
     \sigma \rhd x \colon V(x, \sigma)\supseteq V(\sigma(x),\Sigma_x)}
 \end{prooftree}
+\qquad
 \begin{prooftree}
   \infer[left label=\underline{Var}]0[when $\sigma(x)$ is underlined]{
     \sigma \rhd x \colon V(x, \sigma)\supseteq P(\sigma(x),\Sigma_x)}
 \end{prooftree}
-\vspace{0.2cm}
+\]
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma_1 \cup \overbrace{[x \mapsto e_1]}^{\text{support rec}} \rhd e_1 \colon C_1}
   \hypo{\sigma_2 \cup [x \mapsto e_1] \rhd e_2 \colon C_2}
   \infer[left label=Let]2{
@@ -176,10 +176,9 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
     C_1\wedge C_2
     \end{array}}
     }
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma_1 \rhd e_1 \colon C_1}
   \hypo{\sigma_2 \rhd e_2 \colon C_2}
   \infer[left label=Bop]2{
@@ -190,19 +189,17 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
        \underbrace{P(e,\sigma) \supseteq (V(e_2,\sigma_2)\cap 0 \Rightarrow \mathsf{exn}(\mathsf{Divide\_by\_zero}, ()))}_{\text{when bop is }\div}\wedge
        C_1 \wedge C_2
     \end{array}}}
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma \rhd e' \colon C'}
   \infer[left label=Con/Exn]1{\sigma \rhd \mathsf{con \vbar exn}\: \kappa \: e'\colon
     V(e,\sigma) \supseteq \mathsf{con}(\kappa , V(e',\sigma))\wedge
     P(e,\sigma) \supseteq P(e',\sigma)\wedge
     C'}
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma \rhd e' \colon C'}
   \infer[left label=Decon]1[in case]{
     {\begin{array}{r l}
@@ -211,49 +208,44 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
        \mathsf{con}^{-1}_{(2)}(\underbrace{V(e',\sigma)\cap \mathsf{con}(\kappa, \_)}_{\text{filter}})\:\wedge \\
        & P(e,\sigma) \supseteq P(e',\sigma) \wedge C'
      \end{array}}}
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma \rhd e' \colon C'}
   \infer[left label=\underline{Decon}]1[in handle]{
        \sigma\rhd \mathsf{decon}\:\kappa\: \underline{e'} \colon
        V(e,\sigma) \supseteq
        \mathsf{con}^{-1}_{(2)}(\underbrace{P(e',\sigma)\cap \mathsf{con}(\kappa, \_)}_{\text{filter}}) \wedge C'
      }
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma_{i}\rhd e_i \colon C_i \: (1 \leq i \leq n)}
   \infer[left label=Record]1{\sigma \rhd \{l_1=e_i,...,l_n=e_n\} \colon
     \bigwedge_{i=1}^{n}{(\mathsf{fld}(V(e,\sigma), l_i) \supseteq V(e_i,\sigma_i))}\wedge
     P(e,\sigma) \supseteq \bigcup_{i=1}^{n}{P(e_i,\sigma_i)}\wedge
     \bigwedge_{i=1}^{n}{C_i}}
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma \rhd e' \colon C'}
   \infer[left label=Field]1{\sigma \rhd e'.l \colon
     V(e,\sigma) \supseteq \mathsf{fld}(V(e',\sigma), l)\wedge
     P(e,\sigma) \supseteq P(e',\sigma)\wedge
     C'
   }
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma\rhd e' \colon C'}
   \infer[left label=Ref]1[new loc]{\sigma \rhd \mathsf{ref}\: e' \colon
     V(e,\sigma) \supseteq \mathsf{loc} \wedge
     \mathsf{cnt}(\mathsf{loc})\supseteq V(e',\sigma) \wedge
     P(e,\sigma) \supseteq P(e',\sigma)\wedge
     C'}
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma_1 \rhd e_1 \colon C_1}
   \hypo{\sigma_2 \rhd e_2 \colon C_2}
   \infer[left label=Update]2{\sigma \rhd e_1 := e_2 \colon
@@ -261,19 +253,17 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
     P_e \supseteq P(e_1,\sigma_1)\cup P(e_2,\sigma_2)\wedge
     C_1 \wedge
     C_2}
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma \rhd e' \colon C'}
   \infer[left label=Bang]1{\sigma \rhd !e' \colon
     V(e,\sigma) \supseteq \mathsf{cnt}(V(e',\sigma))\wedge
     P(e,\sigma) \supseteq P(e',\sigma)\wedge
     C'}
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma_1 \rhd e_1 \colon C_1}
   \hypo{\sigma_2 \rhd e_2 \colon C_2}
   \infer[left label=Seq]2{\sigma \rhd e_1 ; e_2 \colon
@@ -282,7 +272,7 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
     C_1 \wedge
     C_2
   }
-\end{prooftree}
+\end{prooftree*}
 \end{center}
 
 We define an auxilary function for generating constraints out of pattern matching.
@@ -306,8 +296,7 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{try}\
   \end{cases}
 \]
 
-\begin{center}
-\begin{prooftree}
+{\setstretch{1.3}\begin{prooftree*}
   \hypo{\sigma\vbar_{e'}\rhd e' \colon C'}
   \hypo{\sigma_{i}\rhd e_i \colon C_i \: (1\leq i \leq n)}
   \infer[left label=Case]2{\sigma\rhd \mathsf{case}\: e' \: \left(p_i \rightarrow e_i\right)_{i=1}^{n}\colon
@@ -316,10 +305,9 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{try}\
     C'\wedge
     \bigwedge_{i=1}^{n}C_i
   }
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma\vbar_{e'}\rhd e' \colon C'}
   \hypo{\sigma_{i}\rhd e_i \colon C_i \: (1\leq i \leq n)}
   \infer[left label=Handle]2{
@@ -330,19 +318,17 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{try}\
        &\bigwedge_{i=1}^{n}\mathsf{hndl}(e',\sigma,p_i,e_i)\wedge C'\wedge \bigwedge_{i=1}^{n}C_i
     \end{array}}
   }
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma\rhd e' \colon C'}
   \infer[left label=Raise]1{\sigma\rhd \mathsf{raise}\: e' \colon
     P(e,\sigma) \supseteq V(e',\sigma)\cup P(e',\sigma)\wedge
     C'
   }
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma_1 \rhd e_1 \colon C_1}
   \hypo{\sigma_2 \rhd e_2 \colon C_2}
   \hypo{\sigma_3 \cup [x \mapsto e_1] \rhd e_3 \colon C_3}
@@ -356,17 +342,15 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{try}\
        &C_1 \wedge C_2 \wedge C_3 \wedge C_4
     \end{array}}
   }
-\end{prooftree}
-\vspace{0.2cm}
+\end{prooftree*}
 
-\begin{prooftree}
+\begin{prooftree*}
   \hypo{\sigma_1 \rhd e_1 \colon C_1}
   \hypo{\sigma_2 \rhd e_2 \colon C_2}
   \infer[left label=While]2{
        \sigma \rhd \mathsf{while\:}e_1 \: e_2 \colon
        V(e,\sigma) \supseteq () \wedge P(e,\sigma) \supseteq P(e_1,\sigma_1)\cup P(e_2,\sigma_2) \wedge C_1 \wedge C_2}
-\end{prooftree}
-\end{center}
+\end{prooftree*}}
 
 \section{Example}
 
