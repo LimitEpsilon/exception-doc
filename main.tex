@@ -191,7 +191,7 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
        \sigma \rhd e_1 \: \mathsf{bop} \: e_2 \colon
        & V(e,\sigma) \supseteq \mathsf{bop}(V(e_1,\sigma_1), V(e_2,\sigma_2))\:\wedge \\
        & P(e,\sigma) \supseteq P(e_1,\sigma_1)\cup P(e_2,\sigma_2)\wedge
-       \underbrace{P(e,\sigma) \supseteq (V(e_2,\sigma_2)\cap 0 \Rightarrow \mathsf{exn}(\mathsf{Divide\_by\_zero}, ()))}_{\text{when bop is }\div}\wedge
+       \underbrace{P(e,\sigma) \supseteq (V(e_2,\sigma_2)\cap 0 \Rightarrow \mathsf{con}(\mathsf{Divide\_by\_zero}, ()))}_{\text{when bop is }\div}\wedge
        C_1 \wedge C_2
     \end{array}}}
 \end{prooftree*}
@@ -363,7 +363,7 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{try}\
 \underbrace{\text{let }f = \overbrace{\lambda x.\underbrace{\text{Error } \overbrace{(\underbracket{f}_{e_{11}''} \underbracket{x}_{e_{12}''})}^{e_{1}''}}_{e_{1}'}}^{e_{1}}\text{ in }\overbrace{\text{raise } \underbrace{(\overbracket{f}^{e_{21}'} \overbracket{\text{Fail}}^{e_{22}'})}_{e_{2}'}}^{e_{2}}}_{e}
 \]
 
-The above program is type checked as $f:\mathsf{exn}\rightarrow \mathsf{exn}$, yet it does not terminate. The (simplified) set constraints generated for this program are:%
+The above program is type checked as $f:\mathsf{con}\rightarrow \mathsf{con}$, yet it does not terminate. The (simplified) set constraints generated for this program are:%
 \newcounter{mycnta}%
 \newcommand{\mycnta}{\stepcounter{mycnta}(\arabic{mycnta})}
 \[
@@ -379,14 +379,14 @@ The above program is type checked as $f:\mathsf{exn}\rightarrow \mathsf{exn}$, y
     P(e, []) & P(e_{2},[f\mapsto e_{1}]) & e & \textsc{[Let]} & \mycnta\\
     V(e_{1},[f\mapsto e_{1}]) & \langle \lambda x.e_{1}' , [f \mapsto e_{1}]\rangle & e_{1} & \textsc{[Fn]} & \mycnta\\
     \mathsf{app}_{V}(\langle \lambda x.e_{1}' , [f \mapsto e_{1}]\rangle, E_{x}) & V(e_{1}',[f \mapsto e_{1};x \mapsto E_{x}]) & e_{1} & \textsc{[Fn]} & \mycnta\\
-    V(e_{1}',[f \mapsto e_{1};x \mapsto E_{x}]) & \mathsf{exn}(\text{Error},V(e_{1}'', [f \mapsto e_{1};x \mapsto E_{x}])) & e_{1}' & \textsc{[Exn]} & \mycnta\\
+    V(e_{1}',[f \mapsto e_{1};x \mapsto E_{x}]) & \mathsf{con}(\text{Error},V(e_{1}'', [f \mapsto e_{1};x \mapsto E_{x}])) & e_{1}' & \textsc{[Exn]} & \mycnta\\
     V(e_{1}'',[f \mapsto e_{1};x \mapsto E_{x}]) & \mathsf{app}_{V}(V(e_{11}'', [f \mapsto e_{1}]), e_{12}'') & e_{1}'' & \textsc{[App]} & \mycnta\\
     V(e_{11}'', [f \mapsto e_{1}]) & V(e_{1},\Sigma_{f}) & e_{11}'' & \textsc{[Var]} & \mycnta\\
     V(e_{12}'', [x \mapsto E_{x}]) & V(E_{x},\Sigma_{x}) & e_{12}'' & \textsc{[Var]} & \mycnta\\
     P(e_{2},[f \mapsto e_{1}]) & V(e_{2}',[f \mapsto e_{1}]) & e_{2} & \textsc{[Raise]} & \mycnta\\
     V(e_{2}', [f \mapsto e_{1}]) & \mathsf{app}_{V}(V(e_{21}', [f \mapsto e_{1}]), e_{22}') & e_{2}' & \textsc{[App]} & \mycnta\\
     V(e_{21}', [f \mapsto e_{1}]) & V(e_{1},\Sigma_{f}) & e_{21}' & \textsc{[Var]} & \mycnta\\
-    V(e_{22}', []) & \mathsf{exn}(\text{Fail}, ()) & e_{22}' & \textsc{[Exn]} & \mycnta\\
+    V(e_{22}', []) & \mathsf{con}(\text{Fail}, ()) & e_{22}' & \textsc{[Exn]} & \mycnta\\
     \bottomrule
   \end{tblr}
 \]
@@ -405,7 +405,7 @@ To ``solve'' this system of constraints, multiple reduction steps are needed.
     && \mathsf{app}_{V}(\langle \lambda x. e_{1}',[f \mapsto e_{1}]\rangle , e_{22}') & (\because (2))\\
     && V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}']) & (\because (3))\\
     
-    \mycnta & V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}']) & \mathsf{exn}(\text{Error},V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}'])) & (\because (4)) \\
+    \mycnta & V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}']) & \mathsf{con}(\text{Error},V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}'])) & (\because (4)) \\
 
     \SetCell[r=5]{m}\mycnta & V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}']) & \mathsf{app}_{V}(V(e_{11}'',[f\mapsto e_{1}]),e_{12}'') & (\because (5))\\
     && \mathsf{app}_{V}(V(e_{1},\Sigma_{f}),e_{12}'') & (\because (6))\\
@@ -413,7 +413,7 @@ To ``solve'' this system of constraints, multiple reduction steps are needed.
     && \mathsf{app}_{V}(\langle \lambda x.e_{1}',[f\mapsto e_{1}]\rangle,e_{12}'') & (\because (2))\\
     && V(e_{1}',[f \mapsto e_{1};x \mapsto e_{12}'']) & (\because (3))\\
    
-    \mycnta & V(e_{1}',[f \mapsto e_{1};x \mapsto e_{12}'']) & \mathsf{exn}(\text{Error},V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}''])) & (\because (4))\\
+    \mycnta & V(e_{1}',[f \mapsto e_{1};x \mapsto e_{12}'']) & \mathsf{con}(\text{Error},V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}''])) & (\because (4))\\
 
     \SetCell[r=2]{m}\mycnta & V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}'']) & \mathsf{app}_{V}(V(e_{11}'',[f\mapsto e_{1}]),e_{12}'') & (\because (5))\\
     && V(e_{1}',[f\mapsto e_{1};x\mapsto e_{12}'']) & (\text{as in }3)\\
@@ -428,9 +428,9 @@ Let $X_{1}\coloneq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}'])$, $X_{2}\coloneq 
   P(e,[])\supseteq P(e_{2},[f\mapsto e_{1}])&\supseteq V(e_{2}',[f\mapsto e_{1}]) & (\because (1),(8))\\
   V(e_{2}',[f\mapsto e_{1}])&\supseteq X_{1} & (\because 1)\\
   \Rightarrow P(e,[])&\supseteq X_{1} & \\
-  X_{1}&\supseteq \mathsf{exn}(\text{Error},X_{2}) & (\because 2)\\
+  X_{1}&\supseteq \mathsf{con}(\text{Error},X_{2}) & (\because 2)\\
   X_{2}&\supseteq X_{3} & (\because 3)\\
-  X_{3}&\supseteq \mathsf{exn}(\text{Error},X_{4}) & (\because 4)\\
+  X_{3}&\supseteq \mathsf{con}(\text{Error},X_{4}) & (\because 4)\\
   X_{4}&\supseteq X_{3} & (\because 5)
 \end{align*}
 
@@ -500,6 +500,7 @@ The original method $\rhd_{1}$ in \cite{YiRyu97} concludes that since id might s
     && V(e_{222},[]) & (\text{unify with }(11))\\
     && 2 & (\because (11))\\
   \end{tblr}
+\]
 
 If we let $X_{1}\coloneq V(e_{21},[\text{id}\mapsto e_{1}])$, $X_{2}\coloneq V(e_{1}',[x\mapsto e_{212}])$, $X_{3}\coloneq V(e_{22},[\text{id}\mapsto e_{1}])$, $X_{4}\coloneq V(e_{1}',[x\mapsto e_{222}])$, the constraints reduce to:
 
