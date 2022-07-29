@@ -152,6 +152,10 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
   \infer[left label={[VAR]}]0{
     \sigma \rhd x \colon V(x, \sigma)\supseteq V(\sigma(x),\Sigma_x)}
 \end{prooftree}
+\begin{prooftree}
+  \infer[left label={[\underline{VAR}]}]0[when $\sigma(x)$ is underlined]{
+    \sigma \rhd x \colon V(x, \sigma)\supseteq P(\sigma(x),\Sigma_x)}
+\end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
@@ -283,9 +287,19 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{match
 \[
 \mathsf{case}(e',\sigma,p,e'')\coloneq
 \begin{cases}
-  V(e,\sigma) \supseteq V(e'',\sigma\vbar_{e''} \cup [x \mapsto e']) & (p=x)\\
-  V(e,\sigma) \supseteq V(e'',\sigma\vbar_{e''}) & (o.w)
+  V(e,\sigma) \supseteq V(e'',\sigma\vbar_{e''} \cup [x \mapsto e']) \wedge P(e,\sigma) \supseteq P(e'',\sigma\vbar_{e''} \cup [x \mapsto e'])& (p=x)\\
+  V(e,\sigma) \supseteq V(e'',\sigma\vbar_{e''}) \wedge P(e,\sigma) \supseteq P(e'',\sigma\vbar_{e''}) & (o.w)
 \end{cases}
+\]
+
+If we want to figure out the constraint for the expression $e=$ ``$\mathsf{try}\: e' \: \mathsf{with}\: p\rightarrow e''$'' under $\sigma$:
+
+\[
+  \mathsf{hndl}(e',\sigma,p,e'')\coloneq
+  \begin{cases}
+    V(e,\sigma) \supseteq V(e'',\sigma\vbar_{e''} \cup [x \mapsto \underline{e'}]) \wedge P(e,\sigma) \supseteq P(e'',\sigma\vbar_{e''} \cup [x \mapsto \underline{e'}]) & (p=x)\\
+    V(e,\sigma) \supseteq V(e'',\sigma\vbar_{e''}) \wedge P(e,\sigma) \supseteq P(e'',\sigma\vbar_{e''}) & (o.w)
+  \end{cases}
 \]
 
 \begin{center}
@@ -294,7 +308,7 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{match
   \hypo{\sigma_{i}\rhd e_i \colon C_i \: (1\leq i \leq n)}
   \infer[left label={[CASE]}]2{\sigma\rhd \mathsf{case}\: e' \: \left(p_i \rightarrow e_i\right)_{i=1}^{n}\colon
     \bigwedge_{i=1}^{n}\mathsf{case}(e',\sigma,p_i,e_i)\wedge
-    P(e,\sigma) \supseteq \bigcup_{i=1}^{n}P(e_i,\sigma_i) \cup P(e',\sigma\vbar_{e'})\wedge
+    P(e,\sigma) \supseteq P(e',\sigma\vbar_{e'})\wedge
     C'\wedge
     \bigwedge_{i=1}^{n}C_i
   }
@@ -307,9 +321,9 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{match
   \infer[left label={[HANDLE]}]2{
     {\begin{array}{r l}
        \sigma\rhd \mathsf{handle}\: e' \: \left(p_i \rightarrow e_i\right)_{i=1}^{n}\colon
-       &P(e,\sigma) \supseteq (P(e',\sigma\vbar_{e'})\cap\bigcap_{i=1}^{n}\loverbar{\mathsf{exn}(p_i, \_)})\cup \bigcup_{i=1}^{n}P(e_i,\sigma_i)\:\wedge\\
-       &V(e,\sigma) \supseteq V(e',\sigma\vbar_{e'})\cup \bigcup_{i=1}^{n}{V(e_i,\sigma_i)}\:\wedge\\
-       &C'\wedge \bigwedge_{i=1}^{n}C_i
+       &P(e,\sigma) \supseteq (P(e',\sigma\vbar_{e'})\cap\bigcap_{i=1}^{n}\loverbar{\mathsf{exn}(p_i, \_)})\:\wedge\\
+       &V(e,\sigma) \supseteq V(e',\sigma\vbar_{e'})\:\wedge\\
+       &\bigwedge_{i=1}^{n}\mathsf{hndl}(e',\sigma,p_i,e_i)\wedge C'\wedge \bigwedge_{i=1}^{n}C_i
     \end{array}}
   }
 \end{prooftree}
@@ -505,7 +519,7 @@ If we let $X_{1}\coloneq V(e_{21},[\text{id}\mapsto e_{1}])$, $X_{2}\coloneq V(e
   X_{4}&\supseteq 2&(\because 4)
 \end{align*}
 
-Comments: Note that even though id is called two times, there are two variables corresponding to id, which are $V(e_{211},[\text{id}\mapsto e_{1}])$ and $V(e_{221},[\text{id}\mapsto e_{1}])$.
+Comments: Note that even since id is called two times, there are two set variables corresponding to id, which are $V(e_{211},[\text{id}\mapsto e_{1}])$ and $V(e_{221},[\text{id}\mapsto e_{1}])$.
 This is because expressions are tagged by their location in code.
 In other words, we assume the existence of a hash table between expressions and their locations in code.
 
