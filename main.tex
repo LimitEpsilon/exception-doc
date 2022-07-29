@@ -81,8 +81,7 @@ This is addressed by adding conditional set constraints and tracking whether the
   | $P(e,\sigma)$ : set variable corresponding to the possible exn packets of $e$ under $\sigma$
   | $\mathsf{app}_{V}(se,e)$ : values that $se$ can spit out when $se$ is applied to $e$
   | $\mathsf{app}_{P}(se,e)$ : exn packets that $se$ can spit out when $se$ is applied to $e$
-  | $\mathsf{con}(\kappa,se)$ : construct
-  | $\mathsf{exn}(\kappa,se)$ : exception
+  | $\mathsf{con}(\kappa,se)$ : construct, including exceptions
   | $\mathsf{fld}(se, l)$ : contents of the field $l$ of a record $se$
   | $\mathsf{cnt}(se)$ : contents of a reference
   | $\mathsf{bop}(se, se)$ : binary operators, where $\mathsf{bop}\in\{+, -, \times, \div, =, <, >\}$
@@ -188,17 +187,8 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
 
 \begin{prooftree}
   \hypo{\sigma \rhd e' \colon C'}
-  \infer[left label={[CON]}]1{\sigma \rhd \mathsf{con}\: \kappa \: e'\colon
+  \infer[left label={[CON/EXN]}]1{\sigma \rhd \mathsf{con \vbar exn}\: \kappa \: e'\colon
     V(e,\sigma) \supseteq \mathsf{con}(\kappa , V(e',\sigma))\wedge
-    P(e,\sigma) \supseteq P(e',\sigma)\wedge
-    C'}
-\end{prooftree}
-\vspace{0.2cm}
-
-\begin{prooftree}
-  \hypo{\sigma \rhd e' \colon C'}
-  \infer[left label={[EXN]}]1{\sigma \rhd \mathsf{exn}\: \kappa \: e' \colon
-    V(e,\sigma) \supseteq \mathsf{exn}(\kappa, V(e',\sigma))\wedge
     P(e,\sigma) \supseteq P(e',\sigma)\wedge
     C'}
 \end{prooftree}
@@ -210,9 +200,7 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
     {\begin{array}{r l}
        \sigma\rhd \mathsf{decon}\:\kappa\: e' \colon
        & V(e,\sigma) \supseteq
-       \mathsf{con}^{-1}_{(2)}(V(e',\sigma)\cap \mathsf{con}(\kappa, \_))\:\wedge \\
-       & V(e,\sigma) \supseteq
-       \mathsf{exn}^{-1}_{(2)}(\underbrace{V(e',\sigma)\cap \mathsf{exn}(\kappa, \_)}_{\text{filter}})\:\wedge \\
+       \mathsf{con}^{-1}_{(2)}(\underbrace{V(e',\sigma)\cap \mathsf{con}(\kappa, \_)}_{\text{filter}})\:\wedge \\
        & P(e,\sigma) \supseteq P(e',\sigma) \wedge C'
      \end{array}}}
 \end{prooftree}
@@ -223,7 +211,7 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
   \infer[left label={[\underline{DECON}]}]1[in handle]{
        \sigma\rhd \mathsf{decon}\:\kappa\: \underline{e'} \colon
        V(e,\sigma) \supseteq
-       \mathsf{exn}^{-1}_{(2)}(\underbrace{P(e',\sigma)\cap \mathsf{con}(\kappa, \_)}_{\text{filter}}) \wedge C'
+       \mathsf{con}^{-1}_{(2)}(\underbrace{P(e',\sigma)\cap \mathsf{con}(\kappa, \_)}_{\text{filter}}) \wedge C'
      }
 \end{prooftree}
 \vspace{0.2cm}
@@ -329,7 +317,7 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{try}\
   \infer[left label={[HANDLE]}]2{
     {\begin{array}{r l}
        \sigma\rhd \mathsf{handle}\: e' \: \left(p_i \rightarrow e_i\right)_{i=1}^{n}\colon
-       &P(e,\sigma) \supseteq (P(e',\sigma\vbar_{e'})\cap\bigcap_{i=1}^{n}\loverbar{\mathsf{exn}(p_i, \_)})\:\wedge\\
+       &P(e,\sigma) \supseteq (P(e',\sigma\vbar_{e'})\cap\bigcap_{i=1}^{n}\loverbar{\mathsf{con}(p_i, \_)})\:\wedge\\
        &V(e,\sigma) \supseteq V(e',\sigma\vbar_{e'})\:\wedge\\
        &\bigwedge_{i=1}^{n}\mathsf{hndl}(e',\sigma,p_i,e_i)\wedge C'\wedge \bigwedge_{i=1}^{n}C_i
     \end{array}}
