@@ -49,6 +49,8 @@
 % for complement
 \newcommand{\loverbar}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu}
 
+\newcommand*{\Reanalyze}{\textit{ReAnalyze}}
+
 \title{Constructing Set Constraints for ReScript}
 \author{서울대학교 전기$\cdot$정보공학부 이재호, 이준협}
 \date{}
@@ -57,7 +59,7 @@
 
 \section{Definition of set expressions}
 
-This proposal extends upon the results of \cite{YiRyu97} and attempts to address the limitations of the tool \textit{ReAnalyze}.
+This proposal extends upon the results of \cite{YiRyu97} and attempts to address the limitations of the tool \Reanalyze.
 
 In \cite{YiRyu97}, the set-based constraint solving method for program analysis is used to track unhandled exceptions.
 However, the analysis simply collects all instances of a function being called.
@@ -68,10 +70,10 @@ Thus, the set variables must keep track of where the arguments to the functions 
 This is why our definition of the set variable corresponding to the expression $e$ is extended from $V_{e},P_{e}$ to $V(e,\sigma),P(e,\sigma)$.
 $\sigma$ maps free variables in $e$ to code locations where the arguments were supplied.
 
-In \textit{ReAnalyze}, when exceptions are not raised explicitly, it fails to analyze what kind of exceptions might be raised.
+In \Reanalyze, when exceptions are not raised explicitly, it fails to analyze what kind of exceptions might be raised.
 An example is when exception values are wrapped inside a variant \textsf{Error e} and is raised as \textsf{raise e}.
 This is addressed by adding $\sigma$ to set variables and tracking the possible values of expressions, not only the possible exception packets that might be raised.
-Also, when there is a division operator, \textit{Reanalyze} alerts that \textsf{Divide\_by\_zero} might be raised regardless of the denominator.
+Also, when there is a division operator, \Reanalyze{} alerts that \textsf{Divide\_by\_zero} might be raised regardless of the denominator.
 This is addressed by adding conditional set constraints and tracking whether the denominator might turn to 0.
 
 \begin{bnfgrammar}
