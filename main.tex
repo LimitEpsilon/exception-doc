@@ -1,3 +1,4 @@
+%! TEX program = xelatex
 \documentclass{article}
 \usepackage{geometry}
 \geometry{
@@ -5,39 +6,42 @@
  total={170mm,257mm},
  left=20mm,
  top=20mm,
- }
-\usepackage[utf8]{inputenc}
+}
+
 \usepackage{graphicx}
 \usepackage{kotex}
-\usepackage{amsmath}
-\usepackage{amsthm}
-\usepackage{amssymb}
-\usepackage{ebproof}
-\usepackage{fancyvrb}
-\usepackage{biblatex}
 \usepackage{csquotes}
-\usepackage{multicol}
-\newtheorem{clm}{Claim}[section]
+\usepackage{biblatex}
 \addbibresource{citations.bib}
 
-% fonts
+%%% Math settings
+\usepackage{amssymb,amsmath,mathtools} % Before unicode-math
 \usepackage[math-style=TeX,bold-style=TeX]{unicode-math}
+\newtheorem{clm}{Claim}[section]
 
-\usepackage{libertinus}
+%%% Font settings
+\setmainfont{Libertinus Serif}
+\setsansfont{Libertinus Sans}[Scale=MatchUppercase]
+\setmonofont{JuliaMono}[Scale=MatchLowercase]
+\setmathfont{Libertinus Math} % Before set*hangulfont
+\setmathfont{TeX Gyre Pagella Math}[range={\lbrace,\rbrace},Scale=1.1]
+\setmainhangulfont{Noto Serif CJK KR}
+\setsanshangulfont[BoldFont={* Bold}]{KoPubWorld Dotum.ttf}
+\setmonohangulfont{D2Coding}
 
+%%% PL constructs
+\usepackage{ebproof}
+
+% For simplebnf
 \newfontfamily{\fallbackfont}{EB Garamond}
 \DeclareTextFontCommand{\textfallback}{\fallbackfont}
 \usepackage{newunicodechar}
 \newunicodechar{⩴}{\textfallback{⩴}}
 
-\setmainhangulfont{Noto Serif CJK KR}
-\setsanshangulfont[BoldFont={* Bold}]{KoPubWorld Dotum.ttf}
-\setmonohangulfont{D2Coding}
-
 \usepackage{simplebnf}
 
 % because of simplebnf
-\newcommand\vbar{|}
+\newcommand*\vbar{|}
 \newcommand*{\finto}{\xrightarrow{\text{\textrm{fin}}}}
 \newcommand*{\istype}{\mathrel{⩴}}
 \newcommand*{\ortype}{\mathrel{|}}
@@ -50,6 +54,7 @@
 \date{}
 \begin{document}
 \maketitle
+
 \section{Definition of set expressions}
 
 This proposal extends upon the results of \cite{YiRyu97} and attempts to address the limitations of the tool \textit{ReAnalyze}.
