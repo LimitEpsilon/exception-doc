@@ -206,18 +206,26 @@ Notation: $\sigma_{i}\coloneq\sigma\vbar_{e_{i}}$, $E_{x}$: expression variable,
 
 \begin{prooftree}
   \hypo{\sigma \rhd e' \colon C'}
-  \infer[left label={[DECON]}]1[as in SML-NJ's Lambda]{
+  \infer[left label={[DECON]}]1[in case]{
     {\begin{array}{r l}
-       \sigma\rhd \mathsf{decon}\:\kappa\: e' \colon &
-       V(e,\sigma) \supseteq
-       \mathsf{con}^{-1}_{(2)}(\underbrace{V(e',\sigma)\cap \mathsf{con}(\kappa, \_)}_{\text{filter}})
-       \cup
+       \sigma\rhd \mathsf{decon}\:\kappa\: e' \colon
+       & V(e,\sigma) \supseteq
+       \mathsf{con}^{-1}_{(2)}(V(e',\sigma)\cap \mathsf{con}(\kappa, \_))\:\wedge \\
+       & V(e,\sigma) \supseteq
        \mathsf{exn}^{-1}_{(2)}(\underbrace{V(e',\sigma)\cap \mathsf{exn}(\kappa, \_)}_{\text{filter}})\:\wedge \\
-       & P(e,\sigma) \supseteq P(e',\sigma) \wedge
-       C'
+       & P(e,\sigma) \supseteq P(e',\sigma) \wedge C'
      \end{array}}}
 \end{prooftree}
+\vspace{0.2cm}
 
+\begin{prooftree}
+  \hypo{\sigma \rhd e' \colon C'}
+  \infer[left label={[\underline{DECON}]}]1[in handle]{
+       \sigma\rhd \mathsf{decon}\:\kappa\: \underline{e'} \colon
+       V(e,\sigma) \supseteq
+       \mathsf{exn}^{-1}_{(2)}(\underbrace{P(e',\sigma)\cap \mathsf{con}(\kappa, \_)}_{\text{filter}}) \wedge C'
+     }
+\end{prooftree}
 \vspace{0.2cm}
 
 \begin{prooftree}
