@@ -12,6 +12,11 @@
 \usepackage{graphicx}
 \usepackage{kotex}
 \usepackage{csquotes}
+
+\usepackage{tabularray}
+\UseTblrLibrary{booktabs}
+\UseTblrLibrary{counter}
+
 \usepackage{biblatex}
 \addbibresource{citations.bib}
 
@@ -351,71 +356,71 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{try}\
        V(e,\sigma) \supseteq () \wedge P(e,\sigma) \supseteq P(e_1,\sigma_1)\cup P(e_2,\sigma_2) \wedge C_1 \wedge C_2}
 \end{prooftree*}}
 
+\pagebreak
 \section{Example}
 
 \[
 \underbrace{\text{let }f = \overbrace{\lambda x.\underbrace{\text{Error } \overbrace{(\underbrace{f}_{e_{11}''} \underbrace{x}_{e_{12}''})}^{e_{1}''}}_{e_{1}'}}^{e_{1}}\text{ in }\overbrace{\text{raise } \underbrace{(\overbrace{f}^{e_{21}'} \overbrace{\text{Fail}}^{e_{22}'})}_{e_{2}'}}^{e_{2}}}_{e}
 \]
 
-The above program is type checked as $f:\mathsf{exn}\rightarrow \mathsf{exn}$, yet it does not terminate. The (simplified) set constraints generated for this program are:
-
+The above program is type checked as $f:\mathsf{exn}\rightarrow \mathsf{exn}$, yet it does not terminate. The (simplified) set constraints generated for this program are:%
+\newcounter{mycnta}%
+\newcommand{\mycnta}{\stepcounter{mycnta}(\arabic{mycnta})}
 \[
-\begin{array}{l c c c}
-  \text{Constraint} & \text{From} & \text{By} & \text{No.}\\
-  \hline
-  P(e, []) \supseteq P(e_{2},[f\mapsto e_{1}]) & e & \text{[LET]} & (1)\\
-  V(e_{1},[f\mapsto e_{1}]) \supseteq \langle \lambda x.e_{1}' , [f \mapsto e_{1}]\rangle & e_{1} & \text{[FN]} & (2)\\
-  \mathsf{app}_{V}(\langle \lambda x.e_{1}' , [f \mapsto e_{1}]\rangle, E_{x}) \supseteq V(e_{1}',[f \mapsto e_{1};x \mapsto E_{x}]) & e_{1} & \text{[FN]} & (3)\\
-  V(e_{1}',[f \mapsto e_{1};x \mapsto E_{x}]) \supseteq \mathsf{exn}(\text{Error},V(e_{1}'', [f \mapsto e_{1};x \mapsto E_{x}])) & e_{1}' & \text{[EXN]} & (4)\\
-  V(e_{1}'',[f \mapsto e_{1};x \mapsto E_{x}]) \supseteq \mathsf{app}_{V}(V(e_{11}'', [f \mapsto e_{1}]), e_{12}'') & e_{1}'' & \text{[APP]} & (5)\\
-  V(e_{11}'', [f \mapsto e_{1}]) \supseteq V(e_{1},\Sigma_{f}) & e_{11}'' & \text{[VAR]} & (6)\\
-  V(e_{12}'', [x \mapsto E_{x}]) \supseteq V(E_{x},\Sigma_{x}) & e_{12}'' & \text{[VAR]} & (7)\\
-  P(e_{2},[f \mapsto e_{1}]) \supseteq V(e_{2}',[f \mapsto e_{1}]) & e_{2} & \text{[RAISE]} & (8)\\
-  V(e_{2}', [f \mapsto e_{1}]) \supseteq \mathsf{app}_{V}(V(e_{21}', [f \mapsto e_{1}]), e_{22}') & e_{2}' & \text{[APP]} & (9)\\
-  V(e_{21}', [f \mapsto e_{1}]) \supseteq V(e_{1},\Sigma_{f}) & e_{21}' & \text{[VAR]} & (10)\\
-  V(e_{22}', []) \supseteq \mathsf{exn}(\text{Fail}, ()) & e_{22}' & \text{[EXN]} & (11)
-\end{array}
+  \begin{tblr}{
+      colspec = {rlccc},
+      cell{1}{1} = {c=2}{c},
+      vline{2} = {2-Z}{text=\supseteq},
+      vline{3} = {-}{dashed},
+  }
+    \toprule
+    \text{Constraints} && \text{From} & \text{By} & \text{No.}\\
+    \midrule
+    P(e, []) & P(e_{2},[f\mapsto e_{1}]) & e & \textsc{[Let]} & \mycnta\\
+    V(e_{1},[f\mapsto e_{1}]) & \langle \lambda x.e_{1}' , [f \mapsto e_{1}]\rangle & e_{1} & \textsc{[Fn]} & \mycnta\\
+    \mathsf{app}_{V}(\langle \lambda x.e_{1}' , [f \mapsto e_{1}]\rangle, E_{x}) & V(e_{1}',[f \mapsto e_{1};x \mapsto E_{x}]) & e_{1} & \textsc{[Fn]} & \mycnta\\
+    V(e_{1}',[f \mapsto e_{1};x \mapsto E_{x}]) & \mathsf{exn}(\text{Error},V(e_{1}'', [f \mapsto e_{1};x \mapsto E_{x}])) & e_{1}' & \textsc{[Exn]} & \mycnta\\
+    V(e_{1}'',[f \mapsto e_{1};x \mapsto E_{x}]) & \mathsf{app}_{V}(V(e_{11}'', [f \mapsto e_{1}]), e_{12}'') & e_{1}'' & \textsc{[App]} & \mycnta\\
+    V(e_{11}'', [f \mapsto e_{1}]) & V(e_{1},\Sigma_{f}) & e_{11}'' & \textsc{[Var]} & \mycnta\\
+    V(e_{12}'', [x \mapsto E_{x}]) & V(E_{x},\Sigma_{x}) & e_{12}'' & \textsc{[Var]} & \mycnta\\
+    P(e_{2},[f \mapsto e_{1}]) & V(e_{2}',[f \mapsto e_{1}]) & e_{2} & \textsc{[Raise]} & \mycnta\\
+    V(e_{2}', [f \mapsto e_{1}]) & \mathsf{app}_{V}(V(e_{21}', [f \mapsto e_{1}]), e_{22}') & e_{2}' & \textsc{[App]} & \mycnta\\
+    V(e_{21}', [f \mapsto e_{1}]) & V(e_{1},\Sigma_{f}) & e_{21}' & \textsc{[Var]} & \mycnta\\
+    V(e_{22}', []) & \mathsf{exn}(\text{Fail}, ()) & e_{22}' & \textsc{[Exn]} & \mycnta\\
+    \bottomrule
+  \end{tblr}
 \]
 
 To ``solve'' this system of constraints, multiple reduction steps are needed.
+\[
+  \setcounter{mycnta}{0}
+  \begin{tblr}{
+      colspec={|l|[dashed]X[r]X[l]r|},
+      rowspec={|QQQQQ|Q|QQQQQ|Q|QQ|Q|},
+      vline{3}={1-Y}{text=\supseteq}
+    }
+    \SetCell[r=5]{m}\mycnta & V(e_{2}',[f \mapsto e_{1}]) & \mathsf{app}_{V}(V(e_{21}',[f \mapsto e_{1}]),e_{22}') & (\because (9))\\
+    && \mathsf{app}_{V}(V(e_{1},\Sigma_{f}),e_{22}') & (\because (10))\\
+    && \mathsf{app}_{V}(V(e_{1},[f\mapsto e_{1}]),e_{22}') & (\text{unify with }(2))\\
+    && \mathsf{app}_{V}(\langle \lambda x. e_{1}',[f \mapsto e_{1}]\rangle , e_{22}') & (\because (2))\\
+    && V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}']) & (\because (3))\\
+    
+    \mycnta & V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}']) & \mathsf{exn}(\text{Error},V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}'])) & (\because (4)) \\
 
-\begin{enumerate}
-  \item
-        \begin{align*}
-          V(e_{2}',[f \mapsto e_{1}])
-          &\supseteq \mathsf{app}_{V}(V(e_{21}',[f \mapsto e_{1}]),e_{22}') & (\because (9))\\
-          &\supseteq \mathsf{app}_{V}(V(e_{1},\Sigma_{f}),e_{22}') & (\because (10))\\
-          &\supseteq \mathsf{app}_{V}(V(e_{1},[f\mapsto e_{1}]),e_{22}') & (\text{unify with }(2))\\
-          &\supseteq \mathsf{app}_{V}(\langle \lambda x. e_{1}',[f \mapsto e_{1}]\rangle , e_{22}') & (\because (2))\\
-          &\supseteq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}']) & (\because (3))
-        \end{align*}
-  \item
-        \begin{align*}
-          V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}'])
-          &\supseteq \mathsf{exn}(\text{Error},V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}'])) & (\because (4))
-        \end{align*}
-  \item
-        \begin{align*}
-          V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}'])
-          &\supseteq \mathsf{app}_{V}(V(e_{11}'',[f\mapsto e_{1}]),e_{12}'') & (\because (5))\\
-          &\supseteq \mathsf{app}_{V}(V(e_{1},\Sigma_{f}),e_{12}'') & (\because (6))\\
-          &\supseteq \mathsf{app}_{V}(V(e_{1},[f\mapsto e_{1}]),e_{12}'') & (\text{unify with }(2))\\
-          &\supseteq \mathsf{app}_{V}(\langle \lambda x.e_{1}',[f\mapsto e_{1}]\rangle,e_{12}'') & (\because (2))\\
-          &\supseteq V(e_{1}',[f \mapsto e_{1};x \mapsto e_{12}'']) & (\because (3))
-        \end{align*}
-  \item
-        \begin{align*}
-          V(e_{1}',[f \mapsto e_{1};x \mapsto e_{12}''])
-          &\supseteq \mathsf{exn}(\text{Error},V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}''])) & (\because (4))
-        \end{align*}
-  \item
-        \begin{align*}
-          V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}''])
-          &\supseteq \mathsf{app}_{V}(V(e_{11}'',[f\mapsto e_{1}]),e_{12}'') & (\because (5))\\
-          &\supseteq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{12}'']) & (\text{as in }3)
-        \end{align*}
-  \item Cannot reduce further as $V(e_{1}',[f \mapsto e_{1};x\mapsto e_{12}''])$ was already reduced in 4.
-\end{enumerate}
+    \SetCell[r=5]{m}\mycnta & V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}']) & \mathsf{app}_{V}(V(e_{11}'',[f\mapsto e_{1}]),e_{12}'') & (\because (5))\\
+    && \mathsf{app}_{V}(V(e_{1},\Sigma_{f}),e_{12}'') & (\because (6))\\
+    && \mathsf{app}_{V}(V(e_{1},[f\mapsto e_{1}]),e_{12}'') & (\text{unify with }(2))\\
+    && \mathsf{app}_{V}(\langle \lambda x.e_{1}',[f\mapsto e_{1}]\rangle,e_{12}'') & (\because (2))\\
+    && V(e_{1}',[f \mapsto e_{1};x \mapsto e_{12}'']) & (\because (3))\\
+   
+    \mycnta & V(e_{1}',[f \mapsto e_{1};x \mapsto e_{12}'']) & \mathsf{exn}(\text{Error},V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}''])) & (\because (4))\\
+
+    \SetCell[r=2]{m}\mycnta & V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}'']) & \mathsf{app}_{V}(V(e_{11}'',[f\mapsto e_{1}]),e_{12}'') & (\because (5))\\
+    && V(e_{1}',[f\mapsto e_{1};x\mapsto e_{12}'']) & (\text{as in }3)\\
+    
+    \mycnta & \SetCell[c=3]{c}\text{Cannot reduce further as $V(e_{1}',[f \mapsto e_{1};x\mapsto e_{12}''])$ was already reduced in 4.} &&\\
+  \end{tblr}
+\]
 
 Let $X_{1}\coloneq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{22}'])$, $X_{2}\coloneq V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{22}'])$, $X_{3}\coloneq V(e_{1}',[f\mapsto e_{1};x\mapsto e_{12}''])$, $X_{4}\coloneq V(e_{1}'',[f\mapsto e_{1};x\mapsto e_{12}''])$. Then the constraints reduce to:
 
@@ -444,55 +449,57 @@ In this section, an example program demonstrates how the accuracy of analysis is
 The original method $\rhd_{1}$ in \cite{YiRyu97} concludes that since id might spit out 1 or 2, (id 1) + (id 2) might be anything in \{1+1, 1+2, 2+1, 2+2\}. However, with $\sigma$, this ambiguity is dispelled.
 
 \[
-  \begin{array}{l c c c}
-    \text{Constraint} & \text{From} & \text{By} & \text{No.}\\
-    \hline
-    V(e,[]) \supseteq V(e_{2},[\text{id} \mapsto e_{1}]) & e & \text{[LET]} & (1)\\
-    V(e_{1},[])\supseteq \langle \lambda x.e_{1}' , [] \rangle & e_{1} & \text{[FN]} & (2)\\
-    \mathsf{app}_{V}(\langle \lambda x.e_{1}', [] \rangle, E_{x}) \supseteq V(e_{1}',[x\mapsto E_{x}]) & e_{1} & \text{[FN]} & (3)\\
-    V(e_{1}',[x \mapsto E_{x}]) \supseteq V(E_{x},\Sigma_{x}) & e_{1}' & \text{[VAR]} & (4)\\
-    V(e_{2},[\text{id}\mapsto e_{1}]) \supseteq +(V(e_{21},[\text{id}\mapsto e_{1}]), V(e_{22},[\text{id}\mapsto e_{1}])) & e_{2} & \text{[BOP]} & (5)\\
-    V(e_{21},[\text{id}\mapsto e_{1}]) \supseteq \mathsf{app}_{V}(V(e_{211},[\text{id}\mapsto e_{1}]),e_{212}) & e_{21} & \text{[APP]} & (6)\\
-    V(e_{211},[\text{id}\mapsto e_{1}]) \supseteq V(e_{1},\Sigma_{\text{id}}) & e_{211} & \text{[VAR]} & (7)\\
-    V(e_{212},[]) \supseteq 1 & e_{212} & \text{[INT]} & (8)\\
-    V(e_{22},[\text{id}\mapsto e_{1}]) \supseteq \mathsf{app}_{V}(V(e_{221},[\text{id}\mapsto e_{1}]),e_{222}) & e_{22} & \text{[APP]} & (9)\\
-    V(e_{221},[\text{id}\mapsto e_{1}]) \supseteq V(e_{1},\Sigma_{\text{id}}) & e_{221} & \text{[VAR]} & (10)\\
-    V(e_{222},[]) \supseteq 2 & e_{222} & \text{[INT]} & (11)
-  \end{array}
+  \setcounter{mycnta}{0}
+  \begin{tblr}{
+      colspec = {rlccc},
+      cell{1}{1} = {c=2}{c},
+      vline{2} = {2-Z}{text=\supseteq},
+      vline{3} = {-}{dashed},
+  }
+    \toprule
+    \text{Constraints} && \text{From} & \text{By} & \text{No.}\\
+    \midrule
+    V(e,[]) & V(e_{2},[\text{id} \mapsto e_{1}]) & e & \textsc{[Let]} & \mycnta\\
+    V(e_{1},[]) & \langle \lambda x.e_{1}' , [] \rangle & e_{1} & \textsc{[Fn]} & \mycnta\\
+    \mathsf{app}_{V}(\langle \lambda x.e_{1}', [] \rangle, E_{x}) & V(e_{1}',[x\mapsto E_{x}]) & e_{1} & \textsc{[Fn]} & \mycnta\\
+    V(e_{1}',[x \mapsto E_{x}]) & V(E_{x},\Sigma_{x}) & e_{1}' & \textsc{[Var]} & \mycnta\\
+    V(e_{2},[\text{id}\mapsto e_{1}]) & +(V(e_{21},[\text{id}\mapsto e_{1}]), V(e_{22},[\text{id}\mapsto e_{1}])) & e_{2} & \textsc{[Bop]} & \mycnta\\
+    V(e_{21},[\text{id}\mapsto e_{1}]) & \mathsf{app}_{V}(V(e_{211},[\text{id}\mapsto e_{1}]),e_{212}) & e_{21} & \textsc{[App]} & \mycnta\\
+    V(e_{211},[\text{id}\mapsto e_{1}]) & V(e_{1},\Sigma_{\text{id}}) & e_{211} & \textsc{[Var]} & \mycnta\\
+    V(e_{212},[]) & 1 & e_{212} & \textsc{[Int]} & \mycnta\\
+    V(e_{22},[\text{id}\mapsto e_{1}]) & \mathsf{app}_{V}(V(e_{221},[\text{id}\mapsto e_{1}]),e_{222}) & e_{22} & \textsc{[App]} & \mycnta\\
+    V(e_{221},[\text{id}\mapsto e_{1}]) & V(e_{1},\Sigma_{\text{id}}) & e_{221} & \textsc{[Var]} & \mycnta\\
+    V(e_{222},[]) & 2 & e_{222} & \textsc{[Int]} & \mycnta\\
+    \bottomrule
+  \end{tblr}
 \]
 
-\begin{enumerate}
-  \item
-        \begin{align*}
-          V(e_{21},[\text{id}\mapsto e_{1}])
-          &\supseteq \mathsf{app}_{V}(V(e_{211},[\text{id}\mapsto e_{1}]),e_{212}) & (\because (6))\\
-          &\supseteq \mathsf{app}_{V}(V(e_{1},\Sigma_{\text{id}}),e_{212}) & (\because (7))\\
-          &\supseteq \mathsf{app}_{V}(\langle \lambda x.e_{1}',[] \rangle, e_{212}) & (\because (2))\\
-          &\supseteq V(e_{1}',[x\mapsto e_{212}]) & (\because (3))
-        \end{align*}
-  \item
-        \begin{align*}
-          V(e_{1}',[x\mapsto e_{212}])
-          &\supseteq V(e_{212},\Sigma_{x}) & (\because (4))\\
-          &\supseteq V(e_{212},[]) & (\text{unify with }(7))\\
-          &\supseteq 1 & (\because (8))
-        \end{align*}
-  \item
-        \begin{align*}
-          V(e_{22},[\text{id}\mapsto e_{1}])
-          &\supseteq \mathsf{app}_{V}(V(e_{221},[\text{id}\mapsto e_{1}]),e_{212}) & (\because (9))\\
-          &\supseteq \mathsf{app}_{V}(V(e_{1},\Sigma_{\text{id}}),e_{222}) & (\because (10))\\
-          &\supseteq \mathsf{app}_{V}(\langle \lambda x.e_{1}',[] \rangle, e_{222}) & (\because (2))\\
-          &\supseteq V(e_{1}',[x\mapsto e_{222}]) & (\because (3))
-        \end{align*}
-  \item
-        \begin{align*}
-          V(e_{1}',[x\mapsto e_{222}])
-          &\supseteq V(e_{222},\Sigma_{x}) & (\because (4))\\
-          &\supseteq V(e_{222},[]) & (\text{unify with }(11))\\
-          &\supseteq 2 & (\because (11))
-        \end{align*}
-\end{enumerate}
+
+\[
+  \setcounter{mycnta}{0}
+  \begin{tblr}{
+      colspec={|l|[dashed]X[r]X[l]r|},
+      rowspec={|QQQQ|QQQ|QQQQ|QQQ|},
+      vline{3}={-}{text=\supseteq}
+    }
+    \SetCell[r=4]{m}\mycnta & V(e_{21},[\text{id}\mapsto e_{1}]) & \mathsf{app}_{V}(V(e_{211},[\text{id}\mapsto e_{1}]),e_{212}) & (\because (6))\\
+    && \mathsf{app}_{V}(V(e_{1},\Sigma_{\text{id}}),e_{212}) & (\because (7))\\
+    && \mathsf{app}_{V}(\langle \lambda x.e_{1}',[] \rangle, e_{212}) & (\because (2))\\
+    && V(e_{1}',[x\mapsto e_{212}]) & (\because (3))\\
+
+    \SetCell[r=3]{m}\mycnta & V(e_{1}',[x\mapsto e_{212}]) & V(e_{212},\Sigma_{x}) & (\because (4))\\
+    && V(e_{212},[]) & (\text{unify with }(7))\\
+    && 1 & (\because (8))\\
+    
+    \SetCell[r=4]{m}\mycnta & V(e_{22},[\text{id}\mapsto e_{1}]) & \mathsf{app}_{V}(V(e_{221},[\text{id}\mapsto e_{1}]),e_{212}) & (\because (9))\\
+    && \mathsf{app}_{V}(V(e_{1},\Sigma_{\text{id}}),e_{222}) & (\because (10))\\
+    && \mathsf{app}_{V}(\langle \lambda x.e_{1}',[] \rangle, e_{222}) & (\because (2))\\
+    && V(e_{1}',[x\mapsto e_{222}]) & (\because (3))\\
+
+    \SetCell[r=3]{m}\mycnta & V(e_{1}',[x\mapsto e_{222}]) & V(e_{222},\Sigma_{x}) & (\because (4))\\
+    && V(e_{222},[]) & (\text{unify with }(11))\\
+    && 2 & (\because (11))\\
+  \end{tblr}
 
 If we let $X_{1}\coloneq V(e_{21},[\text{id}\mapsto e_{1}])$, $X_{2}\coloneq V(e_{1}',[x\mapsto e_{212}])$, $X_{3}\coloneq V(e_{22},[\text{id}\mapsto e_{1}])$, $X_{4}\coloneq V(e_{1}',[x\mapsto e_{222}])$, the constraints reduce to:
 
