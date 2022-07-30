@@ -363,7 +363,7 @@ If we want to figure out the constraint for the expression $e=$ ``$\mathsf{try}\
 \underbrace{\text{let }f = \overbrace{\lambda x.\underbrace{\text{Error } \overbrace{(\underbracket{f}_{e_{11}''} \underbracket{x}_{e_{12}''})}^{e_{1}''}}_{e_{1}'}}^{e_{1}}\text{ in }\overbrace{\text{raise } \underbrace{(\overbracket{f}^{e_{21}'} \overbracket{\text{Fail}}^{e_{22}'})}_{e_{2}'}}^{e_{2}}}_{e}
 \]
 
-The above program is type checked as $f:\mathsf{con}\rightarrow \mathsf{con}$, yet it does not terminate. The (simplified) set constraints generated for this program are:%
+The above program is type checked as $f\colon\mathsf{exn}\rightarrow \mathsf{exn}$, yet it does not terminate. The (simplified) set constraints generated for this program are:%
 \newcounter{mycnta}%
 \newcommand{\mycnta}{\stepcounter{mycnta}(\arabic{mycnta})}
 \[
