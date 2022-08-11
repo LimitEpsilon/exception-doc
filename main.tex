@@ -45,7 +45,8 @@
 \usepackage{newunicodechar}
 \newunicodechar{⩴}{\textfallback{⩴}}
 
-\usepackage{simplebnf}
+\usepackage{simplebnf}[2022/05/08]
+\RenewDocumentCommand\SimpleBNFDefEq{}{\ensuremath{⩴}}
 
 % because of simplebnf
 \newcommand*\vbar{|}
