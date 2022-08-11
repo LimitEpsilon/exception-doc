@@ -521,6 +521,21 @@ In other words, we assume the existence of a hash table between expressions and 
 
 Also, note that all constraints are fully utilized in reducing the system of constraints, unlike in the previous section.
 
+\section{Reduction}
+Some very preliminary stuff.
+
+\begin{bnfgrammar}
+  $sc$ ::= $se \supseteq se$ || $\langle\symit{\Lambda} E.sc, \rho\rangle$
+  ;;
+  $\rho$ ::= $[(E, \symit{\Sigma}) \mapsto (e_l, \sigma), \dots]$
+  ;;
+  $\sigma$ ::= $[x \mapsto e_l, \dots]$
+\end{bnfgrammar}
+\begin{align*}
+  \sigma &\vartriangleright e_l : sc\\
+  \rho &\vdash sc \Rightarrow sc
+\end{align*}
+
 \section{TODO}
 \begin{enumerate}
   \item A proof that the constraint generation rules are sound
